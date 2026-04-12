@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -11,7 +11,7 @@ interface NoteEditorProps {
   note: Note | null;
   notebooks: Notebook[];
   labels: Label[];
-  onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds'>>) => void;
+  onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => void;
   onDelete: (id: string) => void;
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
@@ -32,6 +32,13 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
   const [newLabelName, setNewLabelName] = useState('');
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [showHeadingMenu, setShowHeadingMenu] = useState(false);
+  const [showLockDialog, setShowLockDialog] = useState(false);
+  const [lockPassword, setLockPassword] = useState('');
+  const [lockConfirm, setLockConfirm] = useState('');
+  const [lockError, setLockError] = useState('');
+  const [unlockInput, setUnlockInput] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (contentRef.current) {
