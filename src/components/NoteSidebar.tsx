@@ -103,10 +103,9 @@ export function NoteSidebar({
                 {labels.map((label) => (
                   <div key={label.id} className={`group mx-2 mb-1 flex items-center gap-2 cursor-pointer transition-colors`}
                     onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-shadow ${
-                      activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/40' : ''
-                    }`} style={{ backgroundColor: label.color + '33', color: label.color }}>
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: label.color }} />
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-shadow text-white ${
+                      activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/50' : ''
+                    }`} style={{ backgroundColor: label.color }}>
                       {label.name}
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
