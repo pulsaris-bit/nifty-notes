@@ -119,6 +119,34 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
     setNewLabelName('');
   };
 
+  const handleSetPassword = () => {
+    if (!note) return;
+    if (lockPassword.length < 4) { setLockError('Minimaal 4 tekens'); return; }
+    if (lockPassword !== lockConfirm) { setLockError('Wachtwoorden komen niet overeen'); return; }
+    onUpdate(note.id, { password: lockPassword });
+    setShowLockDialog(false);
+    setLockPassword('');
+    setLockConfirm('');
+    setLockError('');
+  };
+
+  const handleRemovePassword = () => {
+    if (!note) return;
+    onUpdate(note.id, { password: null });
+    setUnlockedNotes((prev) => { const next = new Set(prev); next.delete(note.id); return next; });
+  };
+
+  const handleUnlock = () => {
+    if (!note) return;
+    if (unlockInput === note.password) {
+      setUnlockedNotes((prev) => new Set(prev).add(note.id));
+      setUnlockInput('');
+      setUnlockError('');
+    } else {
+      setUnlockError('Onjuist wachtwoord');
+    }
+  };
+
   if (!note) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -132,6 +160,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
 
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
+  const isLocked = !!note.password;
+  const isUnlocked = unlockedNotes.has(note.id);
+  const showLockedView = isLocked && !isUnlocked;
 
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
