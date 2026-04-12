@@ -1,4 +1,4 @@
-import { Search, Plus, Pin } from 'lucide-react';
+import { Search, Plus, Pin, Lock } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -45,6 +45,7 @@ export function NoteList({
               }`}>
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
+                {note.password && <Lock size={12} className="text-muted-foreground mt-0.5 shrink-0" />}
                 <h3 className="text-sm font-medium truncate flex-1">{note.title}</h3>
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
