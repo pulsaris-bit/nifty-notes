@@ -101,12 +101,15 @@ export function NoteSidebar({
             {labelsExpanded && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                 {labels.map((label) => (
-                  <div key={label.id} className={`group mx-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-2.5 cursor-pointer transition-colors ${
-                    activeLabelId === label.id ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
-                  }`} onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
-                    <span className="flex-1 truncate">{label.name}</span>
-                    <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
+                  <div key={label.id} className={`group mx-2 mb-1 flex items-center gap-2 cursor-pointer transition-colors`}
+                    onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-shadow ${
+                      activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/40' : ''
+                    }`} style={{ backgroundColor: label.color + '33', color: label.color }}>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: label.color }} />
+                      {label.name}
+                    </span>
+                    <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
                   </div>
                 ))}
                 {isCreatingLabel ? (
