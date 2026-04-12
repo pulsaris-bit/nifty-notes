@@ -225,6 +225,41 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
               </div>
             )}
           </div>
+          {/* Lock button */}
+          <div className="relative">
+            <button onClick={() => {
+              if (isLocked && isUnlocked) {
+                handleRemovePassword();
+              } else if (!isLocked) {
+                setShowLockDialog(true);
+              }
+            }}
+              className={`p-1.5 rounded-md transition-colors ${isLocked ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              title={isLocked ? 'Beveiliging verwijderen' : 'Beveiligen met wachtwoord'}>
+              {isLocked ? <Lock size={16} /> : <LockOpen size={16} />}
+            </button>
+            {showLockDialog && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowLockDialog(false)} />
+                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50 p-4">
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5"><Lock size={14} /> Notitie beveiligen</h4>
+                  <div className="space-y-2">
+                    <input type="password" value={lockPassword} onChange={(e) => { setLockPassword(e.target.value); setLockError(''); }}
+                      placeholder="Wachtwoord" className="w-full text-sm px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
+                    <input type="password" value={lockConfirm} onChange={(e) => { setLockConfirm(e.target.value); setLockError(''); }}
+                      placeholder="Bevestig wachtwoord"
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSetPassword(); }}
+                      className="w-full text-sm px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
+                    {lockError && <p className="text-xs text-destructive">{lockError}</p>}
+                    <button onClick={handleSetPassword}
+                      className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-1.5 hover:opacity-90 transition-opacity">
+                      Beveiligen
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={() => onUpdate(note.id, { pinned: !note.pinned })}
             className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
