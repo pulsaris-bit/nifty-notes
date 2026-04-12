@@ -1,4 +1,4 @@
-import { Search, Plus, Pin } from 'lucide-react';
+import { Search, Plus, Pin, Lock } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
