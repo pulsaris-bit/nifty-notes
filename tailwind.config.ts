@@ -13,7 +13,21 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['Instrument Serif', 'serif'],
+        body: ['DM Sans', 'sans-serif'],
+      },
       colors: {
+        'sidebar-custom': {
+          bg: 'hsl(var(--sidebar-bg))',
+          fg: 'hsl(var(--sidebar-fg))',
+          'fg-active': 'hsl(var(--sidebar-fg-active))',
+          accent: 'hsl(var(--sidebar-accent))',
+          border: 'hsl(var(--sidebar-border))',
+        },
+        'note-list': {
+          bg: 'hsl(var(--note-list-bg))',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
