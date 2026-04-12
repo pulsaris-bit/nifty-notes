@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface NoteEditorProps {
   note: Note | null;
@@ -19,6 +21,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
     if (contentRef.current) {
@@ -29,6 +32,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
 
   useEffect(() => {
     setShowLabelPicker(false);
+    setMode('edit');
   }, [note?.id]);
 
   const handleContentChange = useCallback(
@@ -73,6 +77,20 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
           <span>Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Mode toggle */}
+          <div className="flex items-center border border-border rounded-md mr-1">
+            <button onClick={() => setMode('edit')}
+              className={`p-1.5 rounded-l-md transition-colors ${mode === 'edit' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              title="Bewerken">
+              <Pencil size={14} />
+            </button>
+            <button onClick={() => setMode('preview')}
+              className={`p-1.5 rounded-r-md transition-colors ${mode === 'preview' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              title="Voorbeeld">
+              <Eye size={14} />
+            </button>
+          </div>
+
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
@@ -138,10 +156,23 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
       <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
         <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
           className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
-          placeholder="Titel..." />
-        <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
-          className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh]"
-          placeholder="Begin met schrijven..." />
+          placeholder="Titel..."
+          readOnly={mode === 'preview'}
+        />
+
+        {mode === 'edit' ? (
+          <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
+            className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
+            placeholder="Schrijf in markdown..." />
+        ) : (
+          <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground">
+            {note.content ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+            ) : (
+              <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
