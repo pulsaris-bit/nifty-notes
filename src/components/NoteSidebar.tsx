@@ -128,6 +128,11 @@ export function NoteSidebar({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Version */}
+      <div className="px-4 py-3 text-[10px] text-sidebar-custom-fg/40">
+        v1.0.0
+      </div>
     </aside>
   );
 }
