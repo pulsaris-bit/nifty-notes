@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -17,11 +17,21 @@ interface NoteEditorProps {
   onCreateLabel: (name: string) => Label;
 }
 
+const headingOptions = [
+  { label: 'Hoofdtekst', prefix: '', replace: true },
+  { label: 'H1', prefix: '# ', replace: true },
+  { label: 'H2', prefix: '## ', replace: true },
+  { label: 'H3', prefix: '### ', replace: true },
+  { label: 'H4', prefix: '#### ', replace: true },
+  { label: 'H5', prefix: '##### ', replace: true },
+];
+
 export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onToggleLabel, onCreateLabel }: NoteEditorProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [showHeadingMenu, setShowHeadingMenu] = useState(false);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -44,6 +54,50 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
     },
     [note, onUpdate]
   );
+
+  const insertAtCursor = useCallback((insertion: string) => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = note.content;
+    const newText = text.substring(0, start) + insertion + text.substring(end);
+    onUpdate(note.id, { content: newText });
+    setTimeout(() => {
+      ta.focus();
+      const pos = start + insertion.length;
+      ta.setSelectionRange(pos, pos);
+    }, 0);
+  }, [note, onUpdate]);
+
+  const applyHeading = useCallback((prefix: string) => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const text = note.content;
+    // Find start of current line
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = text.indexOf('\n', start);
+    const actualEnd = lineEnd === -1 ? text.length : lineEnd;
+    let line = text.substring(lineStart, actualEnd);
+    // Strip existing heading prefixes
+    line = line.replace(/^#{1,6}\s*/, '');
+    const newLine = prefix + line;
+    const newText = text.substring(0, lineStart) + newLine + text.substring(actualEnd);
+    onUpdate(note.id, { content: newText });
+    setShowHeadingMenu(false);
+    setTimeout(() => { ta.focus(); }, 0);
+  }, [note, onUpdate]);
+
+  const insertHorizontalRule = useCallback(() => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const text = note.content;
+    const before = start > 0 && text[start - 1] !== '\n' ? '\n' : '';
+    const after = start < text.length && text[start] !== '\n' ? '\n' : '';
+    insertAtCursor(before + '\n---\n' + after);
+  }, [note, insertAtCursor]);
 
   const handleAddNewLabel = () => {
     if (!note || !newLabelName.trim()) return;
@@ -152,6 +206,46 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
         </div>
       )}
 
+      {/* Formatting toolbar (edit mode only) */}
+      {mode === 'edit' && (
+        <div className="flex items-center gap-1 px-6 py-1.5 border-b border-border/50">
+          {/* Heading dropdown */}
+          <div className="relative">
+            <button onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+              <span className="font-medium">Heading</span>
+              <ChevronDown size={12} />
+            </button>
+            {showHeadingMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowHeadingMenu(false)} />
+                <div className="absolute left-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                  {headingOptions.map((opt) => (
+                    <button key={opt.label} onClick={() => applyHeading(opt.prefix)}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2">
+                      <span className={`font-medium ${opt.label === 'Hoofdtekst' ? 'text-sm' : ''}`}
+                        style={{ fontSize: opt.label === 'H1' ? '16px' : opt.label === 'H2' ? '14px' : opt.label === 'H3' ? '13px' : opt.label === 'H4' ? '12px' : opt.label === 'H5' ? '11px' : '13px' }}>
+                        {opt.label === 'Hoofdtekst' ? 'Hoofdtekst' : opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="w-px h-4 bg-border mx-1" />
+
+          {/* Horizontal rule */}
+          <button onClick={insertHorizontalRule}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Horizontale lijn">
+            <Minus size={14} />
+            <span>Lijn</span>
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
         <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
@@ -165,7 +259,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
             className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
             placeholder="Schrijf in markdown..." />
         ) : (
-          <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground">
+          <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-border">
             {note.content ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
             ) : (
