@@ -30,6 +30,7 @@ export function NoteSidebar({
   const [newLabelName, setNewLabelName] = useState('');
   const [nbExpanded, setNbExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
+  const [showVersion, setShowVersion] = useState(false);
 
   const handleCreateNb = () => {
     if (newNbName.trim()) { onCreateNotebook(newNbName.trim()); setNewNbName(''); setIsCreatingNb(false); }
