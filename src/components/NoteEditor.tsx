@@ -285,68 +285,88 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
         </div>
       )}
 
-      {/* Formatting toolbar (edit mode only) */}
-      {mode === 'edit' && (
-        <div className="flex items-center gap-1 px-6 py-1.5 border-b border-border/50">
-          {/* Heading dropdown */}
-          <div className="relative">
-            <button onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-              <span className="font-medium">Heading</span>
-              <ChevronDown size={12} />
-            </button>
-            {showHeadingMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowHeadingMenu(false)} />
-                <div className="absolute left-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
-                  {headingOptions.map((opt) => (
-                    <button key={opt.label} onClick={() => applyHeading(opt.prefix)}
-                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2">
-                      <span className={`font-medium ${opt.label === 'Hoofdtekst' ? 'text-sm' : ''}`}
-                        style={{ fontSize: opt.label === 'H1' ? '16px' : opt.label === 'H2' ? '14px' : opt.label === 'H3' ? '13px' : opt.label === 'H4' ? '12px' : opt.label === 'H5' ? '11px' : '13px' }}>
-                        {opt.label === 'Hoofdtekst' ? 'Hoofdtekst' : opt.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+      {showLockedView ? (
+        /* Locked view */
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-xs">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Lock size={28} className="text-muted-foreground" />
+            </div>
+            <h3 className="font-display text-xl mb-1">{note.title}</h3>
+            <p className="text-sm text-muted-foreground mb-4">Deze notitie is beveiligd met een wachtwoord</p>
+            <div className="space-y-2">
+              <input type="password" value={unlockInput} onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleUnlock(); }}
+                placeholder="Voer wachtwoord in..."
+                className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring text-center" />
+              {unlockError && <p className="text-xs text-destructive">{unlockError}</p>}
+              <button onClick={handleUnlock}
+                className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-2 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+                <ShieldCheck size={14} /> Ontgrendelen
+              </button>
+            </div>
           </div>
-
-          <div className="w-px h-4 bg-border mx-1" />
-
-          {/* Horizontal rule */}
-          <button onClick={insertHorizontalRule}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Horizontale lijn">
-            <Minus size={14} />
-            <span>Lijn</span>
-          </button>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Formatting toolbar (edit mode only) */}
+          {mode === 'edit' && (
+            <div className="flex items-center gap-1 px-6 py-1.5 border-b border-border/50">
+              <div className="relative">
+                <button onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                  <span className="font-medium">Heading</span>
+                  <ChevronDown size={12} />
+                </button>
+                {showHeadingMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowHeadingMenu(false)} />
+                    <div className="absolute left-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                      {headingOptions.map((opt) => (
+                        <button key={opt.label} onClick={() => applyHeading(opt.prefix)}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2">
+                          <span className={`font-medium ${opt.label === 'Hoofdtekst' ? 'text-sm' : ''}`}
+                            style={{ fontSize: opt.label === 'H1' ? '16px' : opt.label === 'H2' ? '14px' : opt.label === 'H3' ? '13px' : opt.label === 'H4' ? '12px' : opt.label === 'H5' ? '11px' : '13px' }}>
+                            {opt.label === 'Hoofdtekst' ? 'Hoofdtekst' : opt.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="w-px h-4 bg-border mx-1" />
+              <button onClick={insertHorizontalRule}
+                className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Horizontale lijn">
+                <Minus size={14} /><span>Lijn</span>
+              </button>
+            </div>
+          )}
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
-        <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
-          className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
-          placeholder="Titel..."
-          readOnly={mode === 'preview'}
-        />
-
-        {mode === 'edit' ? (
-          <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
-            className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
-            placeholder="Schrijf in markdown..." />
-        ) : (
-          <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-border">
-            {note.content ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
+            <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
+              className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
+              placeholder="Titel..."
+              readOnly={mode === 'preview'}
+            />
+            {mode === 'edit' ? (
+              <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
+                className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
+                placeholder="Schrijf in markdown..." />
             ) : (
-              <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+              <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-border">
+                {note.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+                ) : (
+                  <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )
     </motion.div>
   );
 }
