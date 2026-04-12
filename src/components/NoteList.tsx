@@ -61,9 +61,8 @@ export function NoteList({
                   const label = getLabel(lid);
                   if (!label) return null;
                   return (
-                    <span key={lid} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
-                      style={{ backgroundColor: label.color + '22', color: label.color }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: label.color }} />
+                    <span key={lid} className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white"
+                      style={{ backgroundColor: label.color }}>
                       {label.name}
                     </span>
                   );

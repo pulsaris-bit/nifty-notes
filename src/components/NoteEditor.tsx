@@ -125,11 +125,10 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
       {noteLabels.length > 0 && (
         <div className="flex items-center gap-1.5 px-6 py-2 border-b border-border/50 flex-wrap">
           {noteLabels.map((label) => (
-            <span key={label.id} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{ backgroundColor: label.color + '1A', color: label.color }}>
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: label.color }} />
+            <span key={label.id} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold text-white"
+              style={{ backgroundColor: label.color }}>
               {label.name}
-              <button onClick={() => onToggleLabel(note.id, label.id)} className="hover:opacity-70"><X size={12} /></button>
+              <button onClick={() => onToggleLabel(note.id, label.id)} className="hover:opacity-70 text-white/80"><X size={12} /></button>
             </span>
           ))}
         </div>
