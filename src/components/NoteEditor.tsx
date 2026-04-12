@@ -49,6 +49,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
 
   useEffect(() => {
     setShowLabelPicker(false);
+    setShowLockDialog(false);
+    setLockPassword('');
+    setLockConfirm('');
+    setLockError('');
+    setUnlockInput('');
+    setUnlockError('');
     setMode('edit');
   }, [note?.id]);
 
