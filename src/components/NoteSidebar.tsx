@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { BookOpen, Plus, Trash2, ChevronDown, Tag } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +30,7 @@ export function NoteSidebar({
   const [newLabelName, setNewLabelName] = useState('');
   const [nbExpanded, setNbExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
+  const [showVersion, setShowVersion] = useState(false);
 
   const handleCreateNb = () => {
     if (newNbName.trim()) { onCreateNotebook(newNbName.trim()); setNewNbName(''); setIsCreatingNb(false); }
@@ -130,8 +131,29 @@ export function NoteSidebar({
       </div>
 
       {/* Version */}
-      <div className="px-4 py-3 text-[10px] text-sidebar-custom-fg/40">
-        v1.0.0
+      <div className="relative px-4 py-3">
+        <button
+          onClick={() => setShowVersion(!showVersion)}
+          className="text-[10px] text-sidebar-custom-fg/40 hover:text-sidebar-custom-fg/70 transition-colors cursor-pointer"
+        >
+          v1.0.0
+        </button>
+        {showVersion && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowVersion(false)} />
+            <div className="absolute left-3 bottom-10 z-50 w-56 bg-card border border-border rounded-lg shadow-xl p-4 text-foreground">
+              <h3 className="font-display text-base font-normal mb-2">Notities App</h3>
+              <div className="space-y-1.5 text-xs text-muted-foreground">
+                <p><span className="font-medium text-foreground">Versie:</span> 1.0.0</p>
+                <p><span className="font-medium text-foreground">Datum:</span> 12 april 2026</p>
+                <p><span className="font-medium text-foreground">Auteur:</span> Lovable</p>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
+                Notities beheren met notebooks, labels en zoekfunctie.
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );
