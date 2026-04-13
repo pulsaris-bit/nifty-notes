@@ -46,7 +46,7 @@ export function NoteList({
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
                 {note.password && <Lock size={12} className="text-muted-foreground mt-0.5 shrink-0" />}
-                <h3 className="text-sm font-medium truncate flex-1">{note.title}</h3>
+                <h3 className="text-base font-medium truncate flex-1">{note.title}</h3>
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                 {note.content || 'Lege notitie'}
