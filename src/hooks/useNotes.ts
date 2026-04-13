@@ -100,14 +100,18 @@ export function useNotes() {
     if (activeNoteId === id) setActiveNoteId(null);
   }, [activeNoteId]);
 
-  const createNotebook = useCallback((name: string) => {
+  const createNotebook = useCallback((name: string, icon?: string) => {
     const icons = ['📒', '📕', '📗', '📘', '📙'];
     const newNb: Notebook = {
       id: `nb-${Date.now()}`, name,
-      icon: icons[Math.floor(Math.random() * icons.length)],
+      icon: icon || icons[Math.floor(Math.random() * icons.length)],
       color: `hsl(${Math.floor(Math.random() * 360)}, 60%, 45%)`,
     };
     setNotebooks((prev) => [...prev, newNb]);
+  }, []);
+
+  const updateNotebook = useCallback((id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => {
+    setNotebooks((prev) => prev.map((nb) => (nb.id === id ? { ...nb, ...updates } : nb)));
   }, []);
 
   const deleteNotebook = useCallback((id: string) => {
@@ -144,7 +148,7 @@ export function useNotes() {
   return {
     notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
-    createNote, updateNote, deleteNote, createNotebook, deleteNotebook,
+    createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
     createLabel, deleteLabel, toggleNoteLabel,
   };
 }
