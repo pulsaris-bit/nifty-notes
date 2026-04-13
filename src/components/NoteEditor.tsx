@@ -347,6 +347,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
           {/* Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
             <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
+              onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
               placeholder="Titel..."
               readOnly={mode === 'preview'}
