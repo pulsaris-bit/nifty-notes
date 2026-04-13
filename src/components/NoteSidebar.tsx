@@ -1,7 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const EMOJI_OPTIONS = [
+  '📓', '📕', '📗', '📘', '📙', '📒', '💼', '💡', '🎯', '🏠',
+  '🎨', '🎵', '📚', '✈️', '🍽️', '💪', '🧠', '❤️', '⭐', '🔬',
+  '📝', '🗂️', '📋', '🛒', '💰', '🎮', '📷', '🌍', '🔧', '🎓',
+];
 
 interface NoteSidebarProps {
   notebooks: Notebook[];
@@ -10,7 +16,8 @@ interface NoteSidebarProps {
   activeLabelId: string | null;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
-  onCreateNotebook: (name: string) => void;
+  onCreateNotebook: (name: string, icon?: string) => void;
+  onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
   onCreateLabel: (name: string) => void;
   onDeleteLabel: (id: string) => void;
@@ -20,28 +27,53 @@ interface NoteSidebarProps {
 export function NoteSidebar({
   notebooks, labels, activeNotebookId, activeLabelId,
   onSelectNotebook, onSelectLabel,
-  onCreateNotebook, onDeleteNotebook,
+  onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onDeleteLabel,
   noteCountByNotebook,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
+  const [newNbEmoji, setNewNbEmoji] = useState('📓');
+  const [showNewEmojiPicker, setShowNewEmojiPicker] = useState(false);
   const [isCreatingLabel, setIsCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [nbExpanded, setNbExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
   const [showVersion, setShowVersion] = useState(false);
+  const [editingNbId, setEditingNbId] = useState<string | null>(null);
+  const [editNbName, setEditNbName] = useState('');
+  const [editNbEmoji, setEditNbEmoji] = useState('');
+  const [showEditEmojiPicker, setShowEditEmojiPicker] = useState(false);
 
   const handleCreateNb = () => {
-    if (newNbName.trim()) { onCreateNotebook(newNbName.trim()); setNewNbName(''); setIsCreatingNb(false); }
+    if (newNbName.trim()) { onCreateNotebook(newNbName.trim(), newNbEmoji); setNewNbName(''); setNewNbEmoji('📓'); setIsCreatingNb(false); }
   };
   const handleCreateLabel = () => {
     if (newLabelName.trim()) { onCreateLabel(newLabelName.trim()); setNewLabelName(''); setIsCreatingLabel(false); }
   };
+  const startEditNb = (nb: Notebook) => {
+    setEditingNbId(nb.id); setEditNbName(nb.name); setEditNbEmoji(nb.icon); setShowEditEmojiPicker(false);
+  };
+  const saveEditNb = () => {
+    if (editingNbId && editNbName.trim()) {
+      onUpdateNotebook(editingNbId, { name: editNbName.trim(), icon: editNbEmoji });
+    }
+    setEditingNbId(null); setShowEditEmojiPicker(false);
+  };
 
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
-
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); };
+
+  const EmojiGrid = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
+    <div className="grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48">
+      {EMOJI_OPTIONS.map((emoji) => (
+        <button key={emoji} onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
+          className={`w-7 h-7 flex items-center justify-center rounded text-base hover:bg-accent transition-colors ${selected === emoji ? 'bg-accent ring-1 ring-primary' : ''}`}>
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
@@ -67,20 +99,68 @@ export function NoteSidebar({
             {nbExpanded && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                 {notebooks.map((nb) => (
-                  <div key={nb.id} className={`group mx-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-2.5 cursor-pointer transition-colors ${
-                    activeNotebookId === nb.id ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
-                  }`} onClick={() => { onSelectNotebook(nb.id); onSelectLabel(null); }}>
-                    <span>{nb.icon}</span><span className="flex-1 truncate">{nb.name}</span>
-                    <span className="text-xs opacity-60">{noteCountByNotebook[nb.id] || 0}</span>
-                    <button onClick={(e) => { e.stopPropagation(); onDeleteNotebook(nb.id); }} className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
-                  </div>
+                  editingNbId === nb.id ? (
+                    <div key={nb.id} className="mx-2 mb-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <button onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
+                            className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
+                            {editNbEmoji}
+                          </button>
+                          {showEditEmojiPicker && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowEditEmojiPicker(false)} />
+                              <div className="absolute left-0 top-9 z-50">
+                                <EmojiGrid selected={editNbEmoji} onSelect={(e) => { setEditNbEmoji(e); setShowEditEmojiPicker(false); }} />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <input autoFocus value={editNbName} onChange={(e) => setEditNbName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEditNb(); if (e.key === 'Escape') setEditingNbId(null); }}
+                          className="flex-1 bg-sidebar-custom-bg text-sidebar-custom-fg-active text-sm px-2 py-1 rounded outline-none" />
+                      </div>
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => setEditingNbId(null)} className="text-xs text-sidebar-custom-fg/60 px-2 py-0.5 rounded hover:bg-sidebar-custom-bg transition-colors">Annuleer</button>
+                        <button onClick={saveEditNb} className="text-xs text-sidebar-custom-fg-active bg-primary/20 px-2 py-0.5 rounded hover:bg-primary/30 transition-colors">Opslaan</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={nb.id} className={`group mx-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-2.5 cursor-pointer transition-colors ${
+                      activeNotebookId === nb.id ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+                    }`} onClick={() => { onSelectNotebook(nb.id); onSelectLabel(null); }}>
+                      <span>{nb.icon}</span><span className="flex-1 truncate">{nb.name}</span>
+                      <span className="text-xs opacity-60">{noteCountByNotebook[nb.id] || 0}</span>
+                      <button onClick={(e) => { e.stopPropagation(); startEditNb(nb); }} className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"><Pencil size={12} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteNotebook(nb.id); }} className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
+                    </div>
+                  )
                 ))}
                 {isCreatingNb ? (
-                  <div className="mx-2 mt-1">
-                    <input autoFocus value={newNbName} onChange={(e) => setNewNbName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleCreateNb(); if (e.key === 'Escape') setIsCreatingNb(false); }}
-                      onBlur={() => { handleCreateNb(); setIsCreatingNb(false); }}
-                      placeholder="Naam..." className="w-full bg-sidebar-custom-accent text-sidebar-custom-fg-active text-sm px-3 py-1.5 rounded-md outline-none placeholder:text-sidebar-custom-fg/40" />
+                  <div className="mx-2 mt-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <button onClick={() => setShowNewEmojiPicker(!showNewEmojiPicker)}
+                          className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
+                          {newNbEmoji}
+                        </button>
+                        {showNewEmojiPicker && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowNewEmojiPicker(false)} />
+                            <div className="absolute left-0 top-9 z-50">
+                              <EmojiGrid selected={newNbEmoji} onSelect={(e) => { setNewNbEmoji(e); setShowNewEmojiPicker(false); }} />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <input autoFocus value={newNbName} onChange={(e) => setNewNbName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCreateNb(); if (e.key === 'Escape') { setIsCreatingNb(false); setShowNewEmojiPicker(false); } }}
+                        placeholder="Naam..." className="flex-1 bg-sidebar-custom-bg text-sidebar-custom-fg-active text-sm px-2 py-1 rounded outline-none placeholder:text-sidebar-custom-fg/40" />
+                    </div>
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => { setIsCreatingNb(false); setShowNewEmojiPicker(false); }} className="text-xs text-sidebar-custom-fg/60 px-2 py-0.5 rounded hover:bg-sidebar-custom-bg transition-colors">Annuleer</button>
+                      <button onClick={handleCreateNb} className="text-xs text-sidebar-custom-fg-active bg-primary/20 px-2 py-0.5 rounded hover:bg-primary/30 transition-colors">Aanmaken</button>
+                    </div>
                   </div>
                 ) : (
                   <button onClick={() => setIsCreatingNb(true)} className="mx-2 mt-1 px-3 py-1.5 rounded-md text-sm flex items-center gap-2 text-sidebar-custom-fg/50 hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50 transition-colors">
@@ -132,10 +212,8 @@ export function NoteSidebar({
 
       {/* Version */}
       <div className="relative px-4 py-3">
-        <button
-          onClick={() => setShowVersion(!showVersion)}
-          className="text-[10px] text-sidebar-custom-fg/40 hover:text-sidebar-custom-fg/70 transition-colors cursor-pointer"
-        >
+        <button onClick={() => setShowVersion(!showVersion)}
+          className="text-[10px] text-sidebar-custom-fg/40 hover:text-sidebar-custom-fg/70 transition-colors cursor-pointer">
           v1.0.0
         </button>
         {showVersion && (
