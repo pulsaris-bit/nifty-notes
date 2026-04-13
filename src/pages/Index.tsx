@@ -8,7 +8,7 @@ const Index = () => {
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
-    createNote, updateNote, deleteNote, createNotebook, deleteNotebook,
+    createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
     createLabel, deleteLabel, toggleNoteLabel,
   } = useNotes();
 
@@ -24,7 +24,7 @@ const Index = () => {
         notebooks={notebooks} labels={labels}
         activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
         onSelectNotebook={setActiveNotebookId} onSelectLabel={setActiveLabelId}
-        onCreateNotebook={createNotebook} onDeleteNotebook={deleteNotebook}
+        onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
         onCreateLabel={createLabel} onDeleteLabel={deleteLabel}
         noteCountByNotebook={noteCountByNotebook}
       />
