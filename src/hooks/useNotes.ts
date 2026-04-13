@@ -129,6 +129,10 @@ export function useNotes() {
     return newLabel;
   }, [labels]);
 
+  const updateLabel = useCallback((id: string, updates: Partial<Pick<Label, 'name'>>) => {
+    setLabels((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)));
+  }, []);
+
   const deleteLabel = useCallback((id: string) => {
     setLabels((prev) => prev.filter((l) => l.id !== id));
     setNotes((prev) => prev.map((n) => ({ ...n, labelIds: n.labelIds.filter((lid) => lid !== id) })));
@@ -149,6 +153,6 @@ export function useNotes() {
     notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
     createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
-    createLabel, deleteLabel, toggleNoteLabel,
+    createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   };
 }

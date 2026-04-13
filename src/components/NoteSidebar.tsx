@@ -20,6 +20,7 @@ interface NoteSidebarProps {
   onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
   onCreateLabel: (name: string) => void;
+  onUpdateLabel: (id: string, updates: Partial<Pick<Label, 'name'>>) => void;
   onDeleteLabel: (id: string) => void;
   noteCountByNotebook: Record<string, number>;
 }
@@ -28,7 +29,7 @@ export function NoteSidebar({
   notebooks, labels, activeNotebookId, activeLabelId,
   onSelectNotebook, onSelectLabel,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
-  onCreateLabel, onDeleteLabel,
+  onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
@@ -44,6 +45,8 @@ export function NoteSidebar({
   const [editNbName, setEditNbName] = useState('');
   const [editNbEmoji, setEditNbEmoji] = useState('');
   const [showEditEmojiPicker, setShowEditEmojiPicker] = useState(false);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [editLabelName, setEditLabelName] = useState('');
 
   const handleCreateNb = () => {
     if (newNbName.trim()) { onCreateNotebook(newNbName.trim(), newNbEmoji); setNewNbName(''); setNewNbEmoji('📓'); setIsCreatingNb(false); }
@@ -182,15 +185,29 @@ export function NoteSidebar({
             {labelsExpanded && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                 {labels.map((label) => (
-                  <div key={label.id} className={`group mx-2 mb-1 flex items-center gap-2 cursor-pointer transition-colors`}
-                    onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-shadow text-white ${
-                      activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/50' : ''
-                    }`} style={{ backgroundColor: label.color }}>
-                      {label.name}
-                    </span>
-                    <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
-                  </div>
+                  editingLabelId === label.id ? (
+                    <div key={label.id} className="mx-2 mb-1 flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
+                      <input autoFocus value={editLabelName} onChange={(e) => setEditLabelName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && editLabelName.trim()) { onUpdateLabel(label.id, { name: editLabelName.trim() }); setEditingLabelId(null); }
+                          if (e.key === 'Escape') setEditingLabelId(null);
+                        }}
+                        onBlur={() => { if (editLabelName.trim()) onUpdateLabel(label.id, { name: editLabelName.trim() }); setEditingLabelId(null); }}
+                        className="flex-1 bg-sidebar-custom-accent text-sidebar-custom-fg-active text-xs px-2 py-1 rounded outline-none" />
+                    </div>
+                  ) : (
+                    <div key={label.id} className={`group mx-2 mb-1 flex items-center gap-2 cursor-pointer transition-colors`}
+                      onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-shadow text-white ${
+                        activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/50' : ''
+                      }`} style={{ backgroundColor: label.color }}>
+                        {label.name}
+                      </span>
+                      <button onClick={(e) => { e.stopPropagation(); setEditingLabelId(label.id); setEditLabelName(label.name); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-primary transition-opacity"><Pencil size={12} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
+                    </div>
+                  )
                 ))}
                 {isCreatingLabel ? (
                   <div className="mx-2 mt-1">

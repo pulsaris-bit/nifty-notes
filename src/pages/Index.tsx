@@ -9,7 +9,7 @@ const Index = () => {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
     createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
-    createLabel, deleteLabel, toggleNoteLabel,
+    createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   } = useNotes();
 
   const noteCountByNotebook = useMemo(() => {
@@ -25,7 +25,7 @@ const Index = () => {
         activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
         onSelectNotebook={setActiveNotebookId} onSelectLabel={setActiveLabelId}
         onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
-        onCreateLabel={createLabel} onDeleteLabel={deleteLabel}
+        onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
         noteCountByNotebook={noteCountByNotebook}
       />
       <NoteList
