@@ -21,7 +21,7 @@ export function NoteList({
   const getLabel = (id: string) => labels.find((l) => l.id === id);
 
   return (
-    <div className="w-72 shrink-0 bg-note-list-bg border-r border-border flex flex-col h-full">
+    <div className="bg-note-list-bg border-r border-border flex flex-col h-full min-w-0">
       <div className="p-3 space-y-2">
         <div className="relative">
           <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />

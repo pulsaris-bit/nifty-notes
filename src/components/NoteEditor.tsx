@@ -166,7 +166,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
 
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
-      className="flex-1 flex flex-col bg-background h-full overflow-hidden">
+      className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
