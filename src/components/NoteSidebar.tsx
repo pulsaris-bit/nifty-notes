@@ -232,7 +232,7 @@ export function NoteSidebar({
       <div className="relative px-4 py-3">
         <button onClick={() => setShowVersion(!showVersion)}
           className="text-[10px] text-sidebar-custom-fg/40 hover:text-sidebar-custom-fg/70 transition-colors cursor-pointer">
-          v1.0.0
+          v1.0.1
         </button>
         {showVersion && (
           <>
@@ -240,8 +240,8 @@ export function NoteSidebar({
             <div className="absolute left-3 bottom-10 z-50 w-56 bg-card border border-border rounded-lg shadow-xl p-4 text-foreground">
               <h3 className="font-display text-base font-normal mb-2">Notities App</h3>
               <div className="space-y-1.5 text-xs text-muted-foreground">
-                <p><span className="font-medium text-foreground">Versie:</span> 1.0.0</p>
-                <p><span className="font-medium text-foreground">Datum:</span> 12 april 2026</p>
+                <p><span className="font-medium text-foreground">Versie:</span> 1.0.1</p>
+                <p><span className="font-medium text-foreground">Datum:</span> 14 april 2026</p>
                 <p><span className="font-medium text-foreground">Auteur:</span> Lovable</p>
               </div>
               <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground leading-relaxed">
