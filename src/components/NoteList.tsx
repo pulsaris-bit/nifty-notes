@@ -41,7 +41,7 @@ export function NoteList({
           notes.map((note) => (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
               className={`w-full text-left px-4 py-3 border-b border-border/60 transition-colors ${
-                activeNoteId === note.id ? 'bg-accent/80' : 'hover:bg-accent/40'
+                activeNoteId === note.id ? 'bg-accent' : 'hover:bg-accent/40'
               }`}>
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
