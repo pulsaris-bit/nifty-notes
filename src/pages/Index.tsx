@@ -3,6 +3,7 @@ import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { useNotes } from '@/hooks/useNotes';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const Index = () => {
   const {
@@ -28,18 +29,26 @@ const Index = () => {
         onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
         noteCountByNotebook={noteCountByNotebook}
       />
-      <NoteList
-        notes={notes} notebooks={notebooks} labels={labels}
-        activeNoteId={activeNoteId} searchQuery={searchQuery}
-        onSearch={setSearchQuery} onSelectNote={setActiveNoteId} onCreateNote={createNote}
-      />
-      <NoteEditor
-        note={activeNote} notebooks={notebooks} labels={labels}
-        onUpdate={updateNote} onDelete={deleteNote}
-        onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
-      />
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <NoteList
+            notes={notes} notebooks={notebooks} labels={labels}
+            activeNoteId={activeNoteId} searchQuery={searchQuery}
+            onSearch={setSearchQuery} onSelectNote={setActiveNoteId} onCreateNote={createNote}
+          />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={70} minSize={40}>
+          <NoteEditor
+            note={activeNote} notebooks={notebooks} labels={labels}
+            onUpdate={updateNote} onDelete={deleteNote}
+            onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
+};
 };
 
 export default Index;
