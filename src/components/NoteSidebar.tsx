@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,6 +23,7 @@ interface NoteSidebarProps {
   onUpdateLabel: (id: string, updates: Partial<Pick<Label, 'name'>>) => void;
   onDeleteLabel: (id: string) => void;
   noteCountByNotebook: Record<string, number>;
+  onCollapse: () => void;
 }
 
 export function NoteSidebar({
@@ -30,7 +31,7 @@ export function NoteSidebar({
   onSelectNotebook, onSelectLabel,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
-  noteCountByNotebook,
+  noteCountByNotebook, onCollapse,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
@@ -249,6 +250,15 @@ export function NoteSidebar({
             </div>
           </>
         )}
+      </div>
+      <div className="px-3 pb-3 pt-1 flex justify-end">
+        <button
+          onClick={onCollapse}
+          className="p-1.5 rounded-md hover:bg-sidebar-custom-bg-hover text-sidebar-custom-fg hover:text-sidebar-custom-fg-active transition-colors"
+          title="Zijbalk verbergen"
+        >
+          <PanelLeftClose className="w-4 h-4" />
+        </button>
       </div>
     </aside>
   );
