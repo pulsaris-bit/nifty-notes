@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Instrument Serif', 'serif'],
-        body: ['DM Sans', 'sans-serif'],
+        display: ['Roboto', 'sans-serif'],
+        body: ['Roboto', 'sans-serif'],
       },
       colors: {
         'sidebar-custom': {
