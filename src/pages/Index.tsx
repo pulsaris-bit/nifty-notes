@@ -34,7 +34,7 @@ const Index = () => {
           onCollapse={() => setSidebarVisible(false)}
         />
       ) : (
-        <div className="shrink-0 flex items-start pt-3 pl-2">
+        <div className="shrink-0 flex flex-col justify-end pb-3 pl-2 h-full">
           <button
             onClick={() => setSidebarVisible(true)}
             className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
