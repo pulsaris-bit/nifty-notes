@@ -230,7 +230,7 @@ export function NoteSidebar({
       <div className="relative px-4 py-3">
         <button onClick={() => setShowVersion(!showVersion)}
           className="text-[10px] text-sidebar-custom-fg/40 hover:text-sidebar-custom-fg/70 transition-colors cursor-pointer">
-          v1.0.0 testing build 6
+          v1.0.0
         </button>
         {showVersion && (
           <>
