@@ -354,6 +354,22 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
             />
             {mode === 'edit' ? (
               <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const ta = e.currentTarget;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+                    const text = note!.content;
+                    const newText = text.substring(0, start) + '\n\n' + text.substring(end);
+                    onUpdate(note!.id, { content: newText });
+                    setTimeout(() => {
+                      ta.focus();
+                      const pos = start + 2;
+                      ta.setSelectionRange(pos, pos);
+                    }, 0);
+                  }
+                }}
                 className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
                 placeholder="Schrijf in markdown..." />
             ) : (
