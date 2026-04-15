@@ -238,7 +238,7 @@ export function NoteSidebar({
             <div className="absolute left-3 bottom-10 z-50 w-56 bg-card border border-border rounded-lg shadow-xl p-4 text-foreground">
               <h3 className="font-display text-base font-normal mb-2">Notities App</h3>
               <div className="space-y-1.5 text-xs text-muted-foreground">
-                <p><span className="font-medium text-foreground">Versie:</span> 1.0.0 testing build 6</p>
+                <p><span className="font-medium text-foreground">Versie:</span> 1.0.0</p>
                 <p><span className="font-medium text-foreground">Datum:</span> 15 april 2026</p>
                 <p><span className="font-medium text-foreground">Auteur:</span> Lovable</p>
               </div>
