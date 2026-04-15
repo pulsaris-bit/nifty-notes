@@ -1,7 +1,10 @@
-import { Search, Plus, Pin, Lock } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Plus, Pin, Lock, ArrowUpDown } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+
+type SortOption = 'updatedAt' | 'createdAt' | 'title';
 
 interface NoteListProps {
   notes: Note[];
@@ -17,8 +20,29 @@ interface NoteListProps {
 export function NoteList({
   notes, notebooks, labels, activeNoteId, searchQuery, onSearch, onSelectNote, onCreateNote,
 }: NoteListProps) {
+  const [sortBy, setSortBy] = useState<SortOption>('updatedAt');
   const getNotebookName = (id: string) => notebooks.find((nb) => nb.id === id)?.name || '';
   const getLabel = (id: string) => labels.find((l) => l.id === id);
+
+  const sortedNotes = [...notes].sort((a, b) => {
+    // Pinned notes always first
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    switch (sortBy) {
+      case 'title':
+        return a.title.localeCompare(b.title, 'nl');
+      case 'createdAt':
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'updatedAt':
+      default:
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    }
+  });
+
+  const sortLabels: Record<SortOption, string> = {
+    updatedAt: 'Laatst bijgewerkt',
+    createdAt: 'Aanmaakdatum',
+    title: 'Naam',
+  };
 
   return (
     <div className="bg-note-list-bg border-r border-border flex flex-col h-full min-w-0">
@@ -32,13 +56,25 @@ export function NoteList({
           className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-md py-1.5 text-sm font-medium hover:opacity-90 transition-opacity">
           <Plus size={15} />Nieuwe notitie
         </button>
+        <div className="flex items-center gap-1.5">
+          <ArrowUpDown size={12} className="text-muted-foreground shrink-0" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="flex-1 text-xs bg-background border border-border rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-ring text-muted-foreground cursor-pointer"
+          >
+            {Object.entries(sortLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {notes.length === 0 ? (
+        {sortedNotes.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">Geen notities gevonden</div>
         ) : (
-          notes.map((note) => (
+          sortedNotes.map((note) => (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
               className={`w-full text-left px-4 py-3 border-b border-border/60 transition-colors ${
                 activeNoteId === note.id ? 'bg-accent' : 'hover:bg-accent/40'
