@@ -1,3 +1,2 @@
-# Welcome to your Lovable project
+# Nifty Notes
 
-TODO: Document your project here
