@@ -198,13 +198,11 @@ export function NoteSidebar({
                         className="flex-1 bg-sidebar-custom-accent text-sidebar-custom-fg-active text-xs px-2 py-1 rounded outline-none" />
                     </div>
                   ) : (
-                    <div key={label.id} className={`group mx-2 mb-1 flex items-center gap-2 cursor-pointer transition-colors`}
-                      onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-shadow text-white ${
-                        activeLabelId === label.id ? 'ring-2 ring-sidebar-custom-fg-active/50' : ''
-                      }`} style={{ backgroundColor: label.color }}>
-                        {label.name}
-                      </span>
+                    <div key={label.id} className={`group mx-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-2.5 cursor-pointer transition-colors ${
+                      activeLabelId === label.id ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+                    }`} onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
+                      <span className="flex-1 truncate">{label.name}</span>
                       <button onClick={(e) => { e.stopPropagation(); setEditingLabelId(label.id); setEditLabelName(label.name); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-primary transition-opacity"><Pencil size={12} /></button>
                       <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
                     </div>
