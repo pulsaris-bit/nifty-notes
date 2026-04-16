@@ -9,9 +9,9 @@ import { PanelLeftOpen } from 'lucide-react';
 const Index = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const {
-    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
-    createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
+    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   } = useNotes();
 
@@ -27,7 +27,9 @@ const Index = () => {
         <NoteSidebar
           notebooks={notebooks} labels={labels}
           activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
+          showArchived={showArchived}
           onSelectNotebook={setActiveNotebookId} onSelectLabel={setActiveLabelId}
+          onToggleArchived={() => { setShowArchived(!showArchived); setActiveNotebookId(null); setActiveLabelId(null); }}
           onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
           onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
           noteCountByNotebook={noteCountByNotebook}
@@ -56,7 +58,7 @@ const Index = () => {
         <ResizablePanel defaultSize={70} minSize={40}>
           <NoteEditor
             note={activeNote} notebooks={notebooks} labels={labels}
-            onUpdate={updateNote} onDelete={deleteNote}
+            onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
             onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
           />
         </ResizablePanel>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,8 +14,10 @@ interface NoteSidebarProps {
   labels: Label[];
   activeNotebookId: string | null;
   activeLabelId: string | null;
+  showArchived: boolean;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
+  onToggleArchived: () => void;
   onCreateNotebook: (name: string, icon?: string) => void;
   onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
@@ -27,8 +29,8 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  notebooks, labels, activeNotebookId, activeLabelId,
-  onSelectNotebook, onSelectLabel,
+  notebooks, labels, activeNotebookId, activeLabelId, showArchived,
+  onSelectNotebook, onSelectLabel, onToggleArchived,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, onCollapse,
@@ -66,7 +68,7 @@ export function NoteSidebar({
   };
 
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
-  const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); };
+  const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
   const EmojiGrid = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
     <div className="grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48">
@@ -87,9 +89,16 @@ export function NoteSidebar({
 
       <button onClick={handleSelectAll}
         className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
-          !activeNotebookId && !activeLabelId ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+          !activeNotebookId && !activeLabelId && !showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
         }`}>
         <BookOpen size={16} /><span className="flex-1 text-left">Alle notities</span><span className="text-xs opacity-60">{totalNotes}</span>
+      </button>
+
+      <button onClick={onToggleArchived}
+        className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
+          showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+        }`}>
+        <Archive size={16} /><span className="flex-1 text-left">Archief</span>
       </button>
 
       <div className="mt-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">

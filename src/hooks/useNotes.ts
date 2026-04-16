@@ -28,22 +28,22 @@ const defaultNotes: Note[] = [
   {
     id: 'n-1', title: 'Welkom bij je notities',
     content: 'Dit is je persoonlijke notitie-app. Maak notebooks aan, schrijf notities en houd alles overzichtelijk.\n\nProbeer het uit door een nieuwe notitie aan te maken!',
-    notebookId: 'nb-1', labelIds: ['lb-2'], createdAt: new Date(2024, 2, 15), updatedAt: new Date(2024, 2, 15), pinned: true, password: null,
+    notebookId: 'nb-1', labelIds: ['lb-2'], createdAt: new Date(2024, 2, 15), updatedAt: new Date(2024, 2, 15), pinned: true, password: null, archived: false,
   },
   {
     id: 'n-2', title: 'Vergadering maandag',
     content: 'Agenda:\n- Q2 planning bespreken\n- Nieuwe projecten toewijzen\n- Teamuitje organiseren',
-    notebookId: 'nb-2', labelIds: ['lb-1', 'lb-2'], createdAt: new Date(2024, 2, 14), updatedAt: new Date(2024, 2, 14), pinned: false, password: null,
+    notebookId: 'nb-2', labelIds: ['lb-1', 'lb-2'], createdAt: new Date(2024, 2, 14), updatedAt: new Date(2024, 2, 14), pinned: false, password: null, archived: false,
   },
   {
     id: 'n-3', title: 'App idee: Receptenplanner',
     content: 'Een app waarmee je weekmenu\'s kunt plannen en automatisch boodschappenlijstjes genereert.',
-    notebookId: 'nb-3', labelIds: ['lb-3'], createdAt: new Date(2024, 2, 13), updatedAt: new Date(2024, 2, 13), pinned: false, password: null,
+    notebookId: 'nb-3', labelIds: ['lb-3'], createdAt: new Date(2024, 2, 13), updatedAt: new Date(2024, 2, 13), pinned: false, password: null, archived: false,
   },
   {
     id: 'n-4', title: 'Boodschappenlijst',
     content: '- Melk\n- Brood\n- Kaas\n- Appels\n- Pasta\n- Tomatensaus',
-    notebookId: 'nb-1', labelIds: [], createdAt: new Date(2024, 2, 12), updatedAt: new Date(2024, 2, 12), pinned: false, password: null,
+    notebookId: 'nb-1', labelIds: [], createdAt: new Date(2024, 2, 12), updatedAt: new Date(2024, 2, 12), pinned: false, password: null, archived: false,
   },
 ];
 
@@ -55,8 +55,11 @@ export function useNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>('n-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const filteredNotes = notes.filter((note) => {
+    if (showArchived) return note.archived;
+    if (note.archived) return false;
     const matchesNotebook = !activeNotebookId || note.notebookId === activeNotebookId;
     const matchesLabel = !activeLabelId || note.labelIds.includes(activeLabelId);
     const matchesSearch =
@@ -84,6 +87,7 @@ export function useNotes() {
       updatedAt: new Date(),
       pinned: false,
       password: null,
+      archived: false,
     };
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
@@ -92,6 +96,12 @@ export function useNotes() {
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date() } : n))
+    );
+  }, []);
+
+  const archiveNote = useCallback((id: string) => {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, archived: !n.archived, updatedAt: new Date() } : n))
     );
   }, []);
 
@@ -150,9 +160,9 @@ export function useNotes() {
   }, []);
 
   return {
-    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
-    createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
+    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   };
 }
