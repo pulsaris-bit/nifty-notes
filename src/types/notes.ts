@@ -8,6 +8,7 @@ export interface Note {
   updatedAt: Date;
   pinned: boolean;
   password: string | null;
+  archived: boolean;
 }
 
 export interface Notebook {
