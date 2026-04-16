@@ -464,6 +464,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             {mode === 'edit' ? (
               <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
                 onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapSelection('**', '**', 'vetgedrukt'); return; }
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)', 'linktekst'); return; }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     const ta = e.currentTarget;
