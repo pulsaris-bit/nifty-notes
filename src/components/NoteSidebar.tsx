@@ -68,7 +68,7 @@ export function NoteSidebar({
   };
 
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
-  const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); };
+  const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
   const EmojiGrid = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
     <div className="grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48">
@@ -89,7 +89,7 @@ export function NoteSidebar({
 
       <button onClick={handleSelectAll}
         className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
-          !activeNotebookId && !activeLabelId ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+          !activeNotebookId && !activeLabelId && !showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
         }`}>
         <BookOpen size={16} /><span className="flex-1 text-left">Alle notities</span><span className="text-xs opacity-60">{totalNotes}</span>
       </button>
