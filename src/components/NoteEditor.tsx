@@ -55,7 +55,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onTogg
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
-    setMode('edit');
+    setMode('preview');
   }, [note?.id]);
 
   const handleContentChange = useCallback(
