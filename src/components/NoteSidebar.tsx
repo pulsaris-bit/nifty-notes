@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,8 +14,10 @@ interface NoteSidebarProps {
   labels: Label[];
   activeNotebookId: string | null;
   activeLabelId: string | null;
+  showArchived: boolean;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
+  onToggleArchived: () => void;
   onCreateNotebook: (name: string, icon?: string) => void;
   onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
@@ -27,8 +29,8 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  notebooks, labels, activeNotebookId, activeLabelId,
-  onSelectNotebook, onSelectLabel,
+  notebooks, labels, activeNotebookId, activeLabelId, showArchived,
+  onSelectNotebook, onSelectLabel, onToggleArchived,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, onCollapse,
