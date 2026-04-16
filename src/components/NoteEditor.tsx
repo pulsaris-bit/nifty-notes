@@ -84,17 +84,51 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     }, 0);
   }, [note, onUpdate]);
 
+  const wrapSelection = useCallback((before: string, after: string, placeholder = '') => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = note.content;
+    const selected = text.substring(start, end) || placeholder;
+    const newText = text.substring(0, start) + before + selected + after + text.substring(end);
+    onUpdate(note.id, { content: newText });
+    setTimeout(() => {
+      ta.focus();
+      const selStart = start + before.length;
+      const selEnd = selStart + selected.length;
+      ta.setSelectionRange(selStart, selEnd);
+    }, 0);
+  }, [note, onUpdate]);
+
+  const insertAtLineStart = useCallback((prefix: string) => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = note.content;
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const lastLineStart = text.lastIndexOf('\n', end - 1) + 1;
+    // Get all lines in selection
+    const beforeLines = text.substring(0, lineStart);
+    const lineEnd = text.indexOf('\n', end);
+    const actualEnd = lineEnd === -1 ? text.length : lineEnd;
+    const selectedLines = text.substring(lineStart, actualEnd);
+    const newLines = selectedLines.split('\n').map((line) => prefix + line).join('\n');
+    const newText = beforeLines + newLines + text.substring(actualEnd);
+    onUpdate(note.id, { content: newText });
+    setTimeout(() => { ta.focus(); }, 0);
+  }, [note, onUpdate]);
+
   const applyHeading = useCallback((prefix: string) => {
     const ta = contentRef.current;
     if (!ta || !note) return;
     const start = ta.selectionStart;
     const text = note.content;
-    // Find start of current line
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
     const lineEnd = text.indexOf('\n', start);
     const actualEnd = lineEnd === -1 ? text.length : lineEnd;
     let line = text.substring(lineStart, actualEnd);
-    // Strip existing heading prefixes
     line = line.replace(/^#{1,6}\s*/, '');
     const newLine = prefix + line;
     const newText = text.substring(0, lineStart) + newLine + text.substring(actualEnd);
@@ -112,6 +146,15 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     const after = start < text.length && text[start] !== '\n' ? '\n' : '';
     insertAtCursor(before + '\n---\n' + after);
   }, [note, insertAtCursor]);
+
+  const insertTable = useCallback(() => {
+    const table = '\n| Kolom 1 | Kolom 2 | Kolom 3 |\n| --- | --- | --- |\n| cel | cel | cel |\n';
+    insertAtCursor(table);
+  }, [insertAtCursor]);
+
+  const insertCodeBlock = useCallback(() => {
+    wrapSelection('\n```\n', '\n```\n', 'code');
+  }, [wrapSelection]);
 
   const handleAddNewLabel = () => {
     if (!note || !newLabelName.trim()) return;
