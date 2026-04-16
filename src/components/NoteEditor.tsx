@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -84,17 +84,51 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     }, 0);
   }, [note, onUpdate]);
 
+  const wrapSelection = useCallback((before: string, after: string, placeholder = '') => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = note.content;
+    const selected = text.substring(start, end) || placeholder;
+    const newText = text.substring(0, start) + before + selected + after + text.substring(end);
+    onUpdate(note.id, { content: newText });
+    setTimeout(() => {
+      ta.focus();
+      const selStart = start + before.length;
+      const selEnd = selStart + selected.length;
+      ta.setSelectionRange(selStart, selEnd);
+    }, 0);
+  }, [note, onUpdate]);
+
+  const insertAtLineStart = useCallback((prefix: string) => {
+    const ta = contentRef.current;
+    if (!ta || !note) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = note.content;
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const lastLineStart = text.lastIndexOf('\n', end - 1) + 1;
+    // Get all lines in selection
+    const beforeLines = text.substring(0, lineStart);
+    const lineEnd = text.indexOf('\n', end);
+    const actualEnd = lineEnd === -1 ? text.length : lineEnd;
+    const selectedLines = text.substring(lineStart, actualEnd);
+    const newLines = selectedLines.split('\n').map((line) => prefix + line).join('\n');
+    const newText = beforeLines + newLines + text.substring(actualEnd);
+    onUpdate(note.id, { content: newText });
+    setTimeout(() => { ta.focus(); }, 0);
+  }, [note, onUpdate]);
+
   const applyHeading = useCallback((prefix: string) => {
     const ta = contentRef.current;
     if (!ta || !note) return;
     const start = ta.selectionStart;
     const text = note.content;
-    // Find start of current line
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
     const lineEnd = text.indexOf('\n', start);
     const actualEnd = lineEnd === -1 ? text.length : lineEnd;
     let line = text.substring(lineStart, actualEnd);
-    // Strip existing heading prefixes
     line = line.replace(/^#{1,6}\s*/, '');
     const newLine = prefix + line;
     const newText = text.substring(0, lineStart) + newLine + text.substring(actualEnd);
@@ -112,6 +146,15 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     const after = start < text.length && text[start] !== '\n' ? '\n' : '';
     insertAtCursor(before + '\n---\n' + after);
   }, [note, insertAtCursor]);
+
+  const insertTable = useCallback(() => {
+    const table = '\n| Kolom 1 | Kolom 2 | Kolom 3 |\n| --- | --- | --- |\n| cel | cel | cel |\n';
+    insertAtCursor(table);
+  }, [insertAtCursor]);
+
+  const insertCodeBlock = useCallback(() => {
+    wrapSelection('\n```\n', '\n```\n', 'code');
+  }, [wrapSelection]);
 
   const handleAddNewLabel = () => {
     if (!note || !newLabelName.trim()) return;
@@ -317,10 +360,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         <>
           {/* Formatting toolbar (edit mode only) */}
           {mode === 'edit' && (
-            <div className="flex items-center gap-1 px-6 py-1.5 border-b border-border/50">
+            <div className="flex items-center gap-0.5 px-6 py-1.5 border-b border-border/50 flex-wrap">
+              {/* Heading dropdown */}
               <div className="relative">
                 <button onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title="Koppen">
                   <span className="font-medium">Heading</span>
                   <ChevronDown size={12} />
                 </button>
@@ -331,7 +376,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                       {headingOptions.map((opt) => (
                         <button key={opt.label} onClick={() => applyHeading(opt.prefix)}
                           className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2">
-                          <span className={`font-medium ${opt.label === 'Hoofdtekst' ? 'text-sm' : ''}`}
+                          <span className="font-medium"
                             style={{ fontSize: opt.label === 'H1' ? '16px' : opt.label === 'H2' ? '14px' : opt.label === 'H3' ? '13px' : opt.label === 'H4' ? '12px' : opt.label === 'H5' ? '11px' : '13px' }}>
                             {opt.label === 'Hoofdtekst' ? 'Hoofdtekst' : opt.label}
                           </span>
@@ -341,11 +386,69 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                   </>
                 )}
               </div>
+
               <div className="w-px h-4 bg-border mx-1" />
+
+              {/* Inline formatting */}
+              <button onClick={() => wrapSelection('**', '**', 'vetgedrukt')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Vetgedrukt (Ctrl+B)">
+                <Bold size={14} />
+              </button>
+              <button onClick={() => wrapSelection('*', '*', 'cursief')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Cursief (Ctrl+I)">
+                <Italic size={14} />
+              </button>
+              <button onClick={() => wrapSelection('~~', '~~', 'doorgestreept')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Doorhalen">
+                <Strikethrough size={14} />
+              </button>
+              <button onClick={() => wrapSelection('`', '`', 'code')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Inline code">
+                <Code size={14} />
+              </button>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* Block formatting */}
+              <button onClick={() => insertAtLineStart('> ')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Citaat">
+                <Quote size={14} />
+              </button>
+              <button onClick={() => insertAtLineStart('- ')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Ongenummerde lijst">
+                <List size={14} />
+              </button>
+              <button onClick={() => insertAtLineStart('1. ')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Genummerde lijst">
+                <ListOrdered size={14} />
+              </button>
+              <button onClick={() => insertAtLineStart('- [ ] ')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Takenlijst">
+                <ListChecks size={14} />
+              </button>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              {/* Insert elements */}
+              <button onClick={() => wrapSelection('[', '](url)', 'linktekst')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Link invoegen">
+                <Link size={14} />
+              </button>
+              <button onClick={() => insertAtCursor('![alt tekst](afbeelding-url)')}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Afbeelding invoegen">
+                <Image size={14} />
+              </button>
+              <button onClick={insertCodeBlock}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Codeblok">
+                <CodeSquare size={14} />
+              </button>
+              <button onClick={insertTable}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Tabel invoegen">
+                <Table size={14} />
+              </button>
               <button onClick={insertHorizontalRule}
-                className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Horizontale lijn">
-                <Minus size={14} /><span>Lijn</span>
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Horizontale lijn">
+                <Minus size={14} />
               </button>
             </div>
           )}
@@ -361,6 +464,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             {mode === 'edit' ? (
               <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
                 onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapSelection('**', '**', 'vetgedrukt'); return; }
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)', 'linktekst'); return; }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     const ta = e.currentTarget;
