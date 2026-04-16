@@ -94,6 +94,13 @@ export function NoteSidebar({
         <BookOpen size={16} /><span className="flex-1 text-left">Alle notities</span><span className="text-xs opacity-60">{totalNotes}</span>
       </button>
 
+      <button onClick={onToggleArchived}
+        className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
+          showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+        }`}>
+        <Archive size={16} /><span className="flex-1 text-left">Archief</span>
+      </button>
+
       <div className="mt-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">
         {/* Notebooks */}
         <div>
