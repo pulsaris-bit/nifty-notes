@@ -55,8 +55,11 @@ export function useNotes() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>('n-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const filteredNotes = notes.filter((note) => {
+    if (showArchived) return note.archived;
+    if (note.archived) return false;
     const matchesNotebook = !activeNotebookId || note.notebookId === activeNotebookId;
     const matchesLabel = !activeLabelId || note.labelIds.includes(activeLabelId);
     const matchesSearch =
