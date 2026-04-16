@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -13,6 +13,7 @@ interface NoteEditorProps {
   labels: Label[];
   onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => void;
   onDelete: (id: string) => void;
+  onArchive: (id: string) => void;
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
 }
@@ -26,7 +27,7 @@ const headingOptions = [
   { label: 'H5', prefix: '##### ', replace: true },
 ];
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onToggleLabel, onCreateLabel }: NoteEditorProps) {
+export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel }: NoteEditorProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
