@@ -160,9 +160,9 @@ export function useNotes() {
   }, []);
 
   return {
-    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery,
-    createNote, updateNote, deleteNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
+    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   };
 }
