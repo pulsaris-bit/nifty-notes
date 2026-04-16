@@ -84,6 +84,7 @@ export function useNotes() {
       updatedAt: new Date(),
       pinned: false,
       password: null,
+      archived: false,
     };
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
