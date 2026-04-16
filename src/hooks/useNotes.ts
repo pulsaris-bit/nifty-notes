@@ -99,6 +99,12 @@ export function useNotes() {
     );
   }, []);
 
+  const archiveNote = useCallback((id: string) => {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, archived: !n.archived, updatedAt: new Date() } : n))
+    );
+  }, []);
+
   const deleteNote = useCallback((id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     if (activeNoteId === id) setActiveNoteId(null);
