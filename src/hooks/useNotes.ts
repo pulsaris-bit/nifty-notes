@@ -134,12 +134,17 @@ export function useNotes() {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) || null;
 
-  const createNote = useCallback(() => {
+  const createNote = useCallback((notebookId?: string) => {
+    const targetNotebookId = notebookId || activeNotebookId;
+    if (!targetNotebookId) {
+      // No notebook context — caller must pick one via the dialog.
+      return null;
+    }
     const newNote: Note = {
       id: `n-${Date.now()}`,
       title: 'Nieuwe notitie',
       content: '',
-      notebookId: activeNotebookId || notebooks[0]?.id || 'nb-1',
+      notebookId: targetNotebookId,
       labelIds: activeLabelId ? [activeLabelId] : [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -155,7 +160,8 @@ export function useNotes() {
         pinned: newNote.pinned, archived: newNote.archived, password: newNote.password, labelIds: newNote.labelIds,
       }}).catch((e) => console.error('createNote failed', e));
     }
-  }, [activeNotebookId, activeLabelId, notebooks]);
+    return newNote.id;
+  }, [activeNotebookId, activeLabelId]);
 
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
@@ -199,6 +205,7 @@ export function useNotes() {
     if (HAS_API) {
       api('/notebooks', { method: 'POST', body: newNb }).catch((e) => console.error('createNotebook failed', e));
     }
+    return newNb;
   }, []);
 
   const updateNotebook = useCallback((id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => {

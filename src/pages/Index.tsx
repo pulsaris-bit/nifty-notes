@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
+import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
 import { useNotes } from '@/hooks/useNotes';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -19,6 +20,8 @@ const Index = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Mobile only: which pane is showing (list or editor)
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
+  // Notebook picker dialog (when creating a note without a notebook context)
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
@@ -40,7 +43,17 @@ const Index = () => {
   };
 
   const handleCreateNote = () => {
+    if (!activeNotebookId) {
+      setPickerOpen(true);
+      return;
+    }
     createNote();
+    if (isMobile) setMobileView('editor');
+  };
+
+  const handlePickNotebookForNewNote = (notebookId: string) => {
+    setActiveNotebookId(notebookId);
+    createNote(notebookId);
     if (isMobile) setMobileView('editor');
   };
 
@@ -203,6 +216,14 @@ const Index = () => {
           )}
         </div>
       )}
+
+      <SelectNotebookDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        notebooks={notebooks}
+        onPick={handlePickNotebookForNewNote}
+        onCreate={createNotebook}
+      />
     </div>
   );
 };
