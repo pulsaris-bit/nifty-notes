@@ -134,12 +134,17 @@ export function useNotes() {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) || null;
 
-  const createNote = useCallback(() => {
+  const createNote = useCallback((notebookId?: string) => {
+    const targetNotebookId = notebookId || activeNotebookId;
+    if (!targetNotebookId) {
+      // No notebook context — caller must pick one via the dialog.
+      return null;
+    }
     const newNote: Note = {
       id: `n-${Date.now()}`,
       title: 'Nieuwe notitie',
       content: '',
-      notebookId: activeNotebookId || notebooks[0]?.id || 'nb-1',
+      notebookId: targetNotebookId,
       labelIds: activeLabelId ? [activeLabelId] : [],
       createdAt: new Date(),
       updatedAt: new Date(),
