@@ -20,6 +20,8 @@ const Index = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Mobile only: which pane is showing (list or editor)
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
+  // Notebook picker dialog (when creating a note without a notebook context)
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
