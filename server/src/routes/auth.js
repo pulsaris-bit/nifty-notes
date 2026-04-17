@@ -6,9 +6,19 @@ import { signToken, requireAuth } from '../auth.js';
 
 const router = Router();
 
+// Modern password policy — keep in sync with src/lib/passwordPolicy.ts
+const strongPassword = z.string()
+  .min(12, 'Wachtwoord moet minimaal 12 tekens zijn')
+  .max(100, 'Wachtwoord mag maximaal 100 tekens zijn')
+  .regex(/[a-z]/, 'Wachtwoord moet minstens één kleine letter bevatten')
+  .regex(/[A-Z]/, 'Wachtwoord moet minstens één hoofdletter bevatten')
+  .regex(/[0-9]/, 'Wachtwoord moet minstens één cijfer bevatten')
+  .regex(/[^A-Za-z0-9]/, 'Wachtwoord moet minstens één speciaal teken bevatten')
+  .refine((v) => !/\s/.test(v), 'Wachtwoord mag geen spaties bevatten');
+
 const signupSchema = z.object({
   email: z.string().trim().email().max(255),
-  password: z.string().min(6).max(100),
+  password: strongPassword,
   displayName: z.string().trim().min(2).max(50),
 });
 
@@ -162,6 +172,42 @@ router.patch('/me', requireAuth, async (req, res) => {
   values.push(req.userId);
   await pool.query(`UPDATE profiles SET ${fields.join(', ')} WHERE user_id = $${i}`, values);
   res.json({ ok: true });
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(100),
+  newPassword: strongPassword,
+});
+
+router.post('/change-password', requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { currentPassword, newPassword } = parsed.data;
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: 'Nieuw wachtwoord moet verschillen van het huidige wachtwoord.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1 LIMIT 1',
+      [req.userId],
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Gebruiker niet gevonden.' });
+
+    const ok = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!ok) return res.status(401).json({ error: 'Huidig wachtwoord is onjuist.' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [newHash, req.userId],
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('change-password error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { toast } from 'sonner';
 
 const Profile = () => {
@@ -106,6 +107,10 @@ const Profile = () => {
             </form>
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <ChangePasswordCard />
+        </div>
 
         <p className="text-[11px] text-muted-foreground text-center mt-6 leading-relaxed">
           Demo-modus: profielgegevens worden lokaal in je browser bewaard.

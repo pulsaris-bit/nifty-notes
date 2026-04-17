@@ -17,9 +17,12 @@ interface NoteSidebarProps {
   activeNotebookId: string | null;
   activeLabelId: string | null;
   showArchived: boolean;
+  showTrash: boolean;
+  trashedCount: number;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
   onToggleArchived: () => void;
+  onToggleTrash: () => void;
   onCreateNotebook: (name: string, icon?: string) => void;
   onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
@@ -31,8 +34,8 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  notebooks, labels, activeNotebookId, activeLabelId, showArchived,
-  onSelectNotebook, onSelectLabel, onToggleArchived,
+  notebooks, labels, activeNotebookId, activeLabelId, showArchived, showTrash, trashedCount,
+  onSelectNotebook, onSelectLabel, onToggleArchived, onToggleTrash,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, onCollapse,
@@ -86,7 +89,7 @@ export function NoteSidebar({
   return (
     <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
       <div className="px-4 pt-5 pb-3">
-        <h1 className="font-display text-xl text-sidebar-custom-fg-active tracking-wide">Notities</h1>
+        <h1 className="font-display text-xl text-sidebar-custom-fg-active tracking-wide">NiftyNotes</h1>
       </div>
 
       <button onClick={handleSelectAll}
@@ -101,6 +104,14 @@ export function NoteSidebar({
           showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
         }`}>
         <Archive size={16} /><span className="flex-1 text-left">Archief</span>
+      </button>
+
+      <button onClick={onToggleTrash}
+        className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
+          showTrash ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+        }`}>
+        <Trash2 size={16} /><span className="flex-1 text-left">Prullenbak</span>
+        {trashedCount > 0 && <span className="text-xs opacity-60">{trashedCount}</span>}
       </button>
 
       <div className="mt-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">

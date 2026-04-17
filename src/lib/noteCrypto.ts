@@ -11,6 +11,28 @@ const ENC_PREFIX = 'enc:v1:';
 const HASH_PREFIX = 'hash:v1:';
 const PBKDF2_ITERS = 200_000;
 
+// The Web Crypto API (`crypto.subtle`) is only available in "secure contexts":
+// HTTPS, or http://localhost / 127.0.0.1. When the app is served over plain
+// HTTP from a remote host (e.g. http://192.168.x.x:8080 in Docker), `crypto`
+// exists but `crypto.subtle` is `undefined`, which gives the cryptic
+// "Cannot read properties of undefined (reading 'importKey')" error.
+function getSubtle(): SubtleCrypto {
+  const subtle =
+    typeof crypto !== 'undefined' ? (crypto as Crypto).subtle : undefined;
+  if (!subtle) {
+    const isSecure =
+      typeof window !== 'undefined' ? window.isSecureContext : false;
+    const host =
+      typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+    throw new Error(
+      `Versleuteling is niet beschikbaar in deze omgeving (host: ${host}, secure context: ${isSecure}). ` +
+        `De Web Crypto API werkt alleen via HTTPS of via http://localhost. ` +
+        `Open de app via https:// of via http://localhost om notities te kunnen vergrendelen.`,
+    );
+  }
+  return subtle;
+}
+
 // ---------- base64 helpers ----------
 function bufToB64(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
@@ -28,14 +50,15 @@ function b64ToBuf(b64: string): Uint8Array<ArrayBuffer> {
 
 // ---------- key derivation ----------
 async function deriveKey(password: string, salt: BufferSource): Promise<CryptoKey> {
-  const baseKey = await crypto.subtle.importKey(
+  const subtle = getSubtle();
+  const baseKey = await subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
     'PBKDF2',
     false,
     ['deriveKey'],
   );
-  return crypto.subtle.deriveKey(
+  return subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
@@ -45,14 +68,15 @@ async function deriveKey(password: string, salt: BufferSource): Promise<CryptoKe
 }
 
 async function deriveBits(password: string, salt: BufferSource, bytes = 32): Promise<Uint8Array> {
-  const baseKey = await crypto.subtle.importKey(
+  const subtle = getSubtle();
+  const baseKey = await subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
     'PBKDF2',
     false,
     ['deriveBits'],
   );
-  const bits = await crypto.subtle.deriveBits(
+  const bits = await subtle.deriveBits(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
     baseKey,
     bytes * 8,
@@ -72,16 +96,18 @@ export function isEncrypted(value: string | null | undefined): boolean {
 }
 
 export async function encryptPayload(payload: NotePayload, password: string): Promise<string> {
+  const subtle = getSubtle();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv } as AesGcmParams, key, plaintext as BufferSource);
+  const ct = await subtle.encrypt({ name: 'AES-GCM', iv } as AesGcmParams, key, plaintext as BufferSource);
   return `${ENC_PREFIX}${bufToB64(salt)}:${bufToB64(iv)}:${bufToB64(ct)}`;
 }
 
 export async function decryptPayload(blob: string, password: string): Promise<NotePayload> {
   if (!isEncrypted(blob)) throw new Error('Not an encrypted payload');
+  const subtle = getSubtle();
   const rest = blob.slice(ENC_PREFIX.length);
   const [saltB64, ivB64, ctB64] = rest.split(':');
   if (!saltB64 || !ivB64 || !ctB64) throw new Error('Malformed ciphertext');
@@ -91,7 +117,7 @@ export async function decryptPayload(blob: string, password: string): Promise<No
   const key = await deriveKey(password, salt);
   let plain: ArrayBuffer;
   try {
-    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+    plain = await subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
   } catch {
     throw new Error('Onjuist wachtwoord');
   }

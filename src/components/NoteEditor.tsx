@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -22,6 +22,10 @@ interface NoteEditorProps {
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
   onBack?: () => void;
+  /** When true, the editor shows a read-only "in prullenbak" view with restore + permanent delete. */
+  trashMode?: boolean;
+  onRestore?: (id: string) => void;
+  onPurge?: (id: string) => void;
 }
 
 const headingOptions = [
@@ -33,7 +37,7 @@ const headingOptions = [
   { label: 'H5', prefix: '##### ', replace: true },
 ];
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack }: NoteEditorProps) {
+export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge }: NoteEditorProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -144,16 +148,23 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     const end = ta.selectionEnd;
     const text = note.content;
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-    const lastLineStart = text.lastIndexOf('\n', end - 1) + 1;
     // Get all lines in selection
     const beforeLines = text.substring(0, lineStart);
     const lineEnd = text.indexOf('\n', end);
     const actualEnd = lineEnd === -1 ? text.length : lineEnd;
     const selectedLines = text.substring(lineStart, actualEnd);
-    const newLines = selectedLines.split('\n').map((line) => prefix + line).join('\n');
+    const splitLines = selectedLines.split('\n');
+    const newLines = splitLines.map((line) => prefix + line).join('\n');
     const newText = beforeLines + newLines + text.substring(actualEnd);
     onUpdate(note.id, { content: newText });
-    setTimeout(() => { ta.focus(); }, 0);
+    // Move cursor/selection so it lands AFTER the inserted prefix(es), not before.
+    const totalPrefix = prefix.length * splitLines.length;
+    const newStart = start + prefix.length;
+    const newEnd = end + totalPrefix;
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(newStart, newEnd);
+    }, 0);
   }, [note, onUpdate]);
 
   const applyHeading = useCallback((prefix: string) => {
@@ -291,20 +302,85 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
 
+  const daysInTrash = note.deletedAt
+    ? Math.max(0, Math.floor((Date.now() - note.deletedAt.getTime()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const daysLeft = Math.max(0, 30 - daysInTrash);
+
+  const updateNoteContent = (next: string) => {
+    if (isLocked && unlockedEntry) {
+      void updateEncryptedContent(next);
+    } else {
+      onUpdate(note.id, { content: next });
+    }
+  };
+
+  const toggleChecklistItemAtIndex = (targetIndex: number) => {
+    const lines = displayContent.split('\n');
+    let currentIndex = -1;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      if (/^\s*[-*+]\s+\[(?: |x|X)\]\s+/.test(lines[i])) {
+        currentIndex += 1;
+        if (currentIndex === targetIndex) {
+          lines[i] = lines[i].replace(/^((?:\s*[-*+]\s+\[)(?: |x|X)(\]\s+))/, (_m, start, end) => {
+            const isChecked = /\[[xX]\]\s+/.test(lines[i]);
+            return `${start}${isChecked ? ' ' : 'x'}${end}`;
+          });
+          updateNoteContent(lines.join('\n'));
+          return;
+        }
+      }
+    }
+  };
+
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
-        <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground min-w-0">
-          {onBack && (
-            <button onClick={onBack} className="shrink-0 p-1 -ml-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug naar lijst" aria-label="Terug naar lijst">
-              <ArrowLeft size={18} />
+      {trashMode && (
+        <div className="px-3 sm:px-6 py-2 bg-destructive/10 border-b border-destructive/30 text-xs text-destructive flex items-center justify-between gap-3 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <Trash2 size={13} />
+            In de prullenbak — wordt over {daysLeft} {daysLeft === 1 ? 'dag' : 'dagen'} definitief verwijderd
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onRestore?.(note.id)}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-background hover:bg-accent text-foreground transition-colors"
+              title="Terugzetten"
+            >
+              <RotateCcw size={12} /> Terugzetten
             </button>
-          )}
-          {notebook && <span className="flex items-center gap-1 truncate">{notebook.icon} {notebook.name}</span>}
-          <span className="hidden sm:inline">·</span>
-          <span className="hidden sm:inline truncate">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+            <button
+              onClick={() => {
+                if (confirm('Weet je zeker dat je deze notitie definitief wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.')) {
+                  onPurge?.(note.id);
+                }
+              }}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+              title="Definitief verwijderen"
+            >
+              <Trash2 size={12} /> Definitief verwijderen
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Toolbar */}
+      <div className="flex items-start lg:items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-3 text-xs text-muted-foreground min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            {onBack && (
+              <button onClick={onBack} className="shrink-0 p-1 -ml-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug naar lijst" aria-label="Terug naar lijst">
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
+            <span className="hidden lg:inline">·</span>
+          </div>
+          <span className="pl-7 lg:pl-0 whitespace-nowrap">
+            <span className="lg:hidden">Bewerkt {format(note.updatedAt, "d MMM yyyy, HH:mm", { locale: nl })}</span>
+            <span className="hidden lg:inline">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {/* Mode toggle */}
@@ -361,7 +437,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           <div className="relative">
             <button onClick={() => {
               if (isLocked && isUnlocked && note) {
-                // Re-lock: drop the in-memory plaintext, keep encryption + password as-is.
                 setUnlocked((prev) => {
                   const next = new Map(prev);
                   next.delete(note.id);
@@ -405,15 +480,19 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
             {note.pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          <button onClick={() => onArchive(note.id)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
-            {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-          </button>
-          <button onClick={() => onDelete(note.id)}
-            className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Verwijderen">
-            <Trash2 size={16} />
-          </button>
+          {!trashMode && (
+            <button onClick={() => onArchive(note.id)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
+              {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+            </button>
+          )}
+          {!trashMode && (
+            <button onClick={() => onDelete(note.id)}
+              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Naar prullenbak">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -444,7 +523,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 onKeyDown={(e) => { if (e.key === 'Enter') handleUnlock(); }}
                 placeholder="Voer wachtwoord in..."
                 className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring text-center" />
-              {unlockError && <p className="text-xs text-destructive">{unlockError}</p>}
+              {unlockError && <p className="text-xs text-destructive">Onjuist wachtwoord</p>}
               <button onClick={handleUnlock}
                 className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-2 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
                 <ShieldCheck size={14} /> Ontgrendelen
@@ -566,35 +645,77 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                   if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
                   if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)', 'linktekst'); return; }
                   if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
                     const ta = e.currentTarget;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
                     const text = displayContent;
-                    const newText = text.substring(0, start) + '\n\n' + text.substring(end);
-                    if (isLocked && unlockedEntry) {
-                      void updateEncryptedContent(newText);
+                    if (start !== end) return;
+                    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+                    const currentLine = text.substring(lineStart, start);
+                    const listMatch = currentLine.match(/^(\s*)([-*+]\s+\[(?: |x|X)\]\s+|[-*+]\s+|(\d+)\.\s+)(.*)$/);
+                    if (!listMatch) return;
+                    const [, indent, marker, numStr, rest] = listMatch;
+                    e.preventDefault();
+                    let nextText: string;
+                    let nextCursor: number;
+                    if (rest.length === 0) {
+                      const removeStart = lineStart;
+                      nextText = text.substring(0, removeStart) + text.substring(start);
+                      nextCursor = removeStart;
                     } else {
-                      onUpdate(note!.id, { content: newText });
+                      let nextMarker = marker;
+                      nextMarker = nextMarker.replace(/\[(x|X)\]/, '[ ]');
+                      if (numStr) {
+                        const n = parseInt(numStr, 10) + 1;
+                        nextMarker = `${n}. `;
+                      }
+                      const insertion = '\n' + indent + nextMarker;
+                      nextText = text.substring(0, start) + insertion + text.substring(end);
+                      nextCursor = start + insertion.length;
                     }
+                    updateNoteContent(nextText);
                     setTimeout(() => {
                       ta.focus();
-                      const pos = start + 2;
-                      ta.setSelectionRange(pos, pos);
+                      ta.setSelectionRange(nextCursor, nextCursor);
                     }, 0);
                   }
                 }}
                 className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
                 placeholder="Schrijf in markdown..." />
-            ) : (
-              <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                {displayContent ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
-                ) : (
-                  <p className="text-muted-foreground/50 italic">Geen inhoud</p>
-                )}
-              </div>
-            )}
+            ) : (() => {
+              let previewCheckboxIndex = -1;
+              return (
+                <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
+                  {displayContent ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        input: ({ ...props }) => {
+                          if (props.type !== 'checkbox' || trashMode) {
+                            return <input {...props} />;
+                          }
+                          previewCheckboxIndex += 1;
+                          const currentIndex = previewCheckboxIndex;
+                          return (
+                            <input
+                              {...props}
+                              disabled={false}
+                              readOnly={false}
+                              className="cursor-pointer"
+                              onChange={() => toggleChecklistItemAtIndex(currentIndex)}
+                            />
+                          );
+                        },
+                      }}
+                    >
+                      {displayContent}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}

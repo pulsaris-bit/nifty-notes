@@ -6,6 +6,8 @@ import { requireAuth } from '../auth.js';
 const router = Router();
 router.use(requireAuth);
 
+const TRASH_RETENTION_DAYS = 30;
+
 const createSchema = z.object({
   id: z.string().min(1).max(64),
   notebookId: z.string().min(1).max(64),
@@ -38,30 +40,61 @@ function rowToNote(row, labelIds) {
     labelIds,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
   };
 }
 
-router.get('/', async (req, res) => {
+// Auto-purge notes that have been in the trash longer than the retention window.
+// Called opportunistically on every list request.
+async function purgeOldTrash(userId) {
+  try {
+    await pool.query(
+      `DELETE FROM notes
+       WHERE user_id = $1
+         AND deleted_at IS NOT NULL
+         AND deleted_at < now() - ($2 || ' days')::interval`,
+      [userId, String(TRASH_RETENTION_DAYS)],
+    );
+  } catch (e) {
+    console.warn('purgeOldTrash failed', e.message);
+  }
+}
+
+async function fetchNotesWhere(userId, whereClause) {
   const notes = await pool.query(
-    `SELECT id, notebook_id, title, content, pinned, archived, password, created_at, updated_at
-     FROM notes WHERE user_id = $1 ORDER BY updated_at DESC`,
-    [req.userId],
+    `SELECT id, notebook_id, title, content, pinned, archived, password, created_at, updated_at, deleted_at
+     FROM notes WHERE user_id = $1 AND ${whereClause} ORDER BY updated_at DESC`,
+    [userId],
   );
-  if (notes.rows.length === 0) return res.json([]);
+  if (notes.rows.length === 0) return [];
   const ids = notes.rows.map((n) => n.id);
   const links = await pool.query(
     `SELECT nl.note_id, nl.label_id
      FROM note_labels nl
      JOIN notes n ON n.id = nl.note_id
      WHERE n.user_id = $1 AND nl.note_id = ANY($2::text[])`,
-    [req.userId, ids],
+    [userId, ids],
   );
   const byNote = new Map();
   for (const r of links.rows) {
     if (!byNote.has(r.note_id)) byNote.set(r.note_id, []);
     byNote.get(r.note_id).push(r.label_id);
   }
-  res.json(notes.rows.map((n) => rowToNote(n, byNote.get(n.id) || [])));
+  return notes.rows.map((n) => rowToNote(n, byNote.get(n.id) || []));
+}
+
+// Active notes (excludes trash)
+router.get('/', async (req, res) => {
+  await purgeOldTrash(req.userId);
+  const notes = await fetchNotesWhere(req.userId, 'deleted_at IS NULL');
+  res.json(notes);
+});
+
+// Trashed notes
+router.get('/trash', async (req, res) => {
+  await purgeOldTrash(req.userId);
+  const notes = await fetchNotesWhere(req.userId, 'deleted_at IS NOT NULL');
+  res.json(notes);
 });
 
 router.post('/', async (req, res) => {
@@ -134,8 +167,37 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+// Soft delete: move to trash (sets deleted_at = now())
 router.delete('/:id', async (req, res) => {
-  await pool.query('DELETE FROM notes WHERE id = $1 AND user_id = $2', [req.params.id, req.userId]);
+  await pool.query(
+    'UPDATE notes SET deleted_at = now() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
+    [req.params.id, req.userId],
+  );
+  res.json({ ok: true });
+});
+
+// Restore from trash
+router.post('/:id/restore', async (req, res) => {
+  const { rowCount } = await pool.query(
+    'UPDATE notes SET deleted_at = NULL WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL',
+    [req.params.id, req.userId],
+  );
+  if (rowCount === 0) return res.status(404).json({ error: 'Note not in trash' });
+  res.json({ ok: true });
+});
+
+// Permanent delete (only from trash)
+router.delete('/:id/permanent', async (req, res) => {
+  await pool.query(
+    'DELETE FROM notes WHERE id = $1 AND user_id = $2',
+    [req.params.id, req.userId],
+  );
+  res.json({ ok: true });
+});
+
+// Manual purge of all notes older than retention window
+router.post('/trash/purge', async (req, res) => {
+  await purgeOldTrash(req.userId);
   res.json({ ok: true });
 });
 
