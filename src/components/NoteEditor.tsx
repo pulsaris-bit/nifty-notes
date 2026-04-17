@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -16,6 +16,7 @@ interface NoteEditorProps {
   onArchive: (id: string) => void;
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
+  onBack?: () => void;
 }
 
 const headingOptions = [
@@ -27,7 +28,7 @@ const headingOptions = [
   { label: 'H5', prefix: '##### ', replace: true },
 ];
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel }: NoteEditorProps) {
+export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack }: NoteEditorProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -193,7 +194,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
   if (!note) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center bg-background h-full">
+        {onBack && (
+          <button onClick={onBack} className="absolute top-3 left-3 p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug">
+            <ArrowLeft size={18} />
+          </button>
+        )}
         <div className="text-center text-muted-foreground">
           <FileText size={48} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">Selecteer een notitie om te bewerken</p>
@@ -212,11 +218,16 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {notebook && <span className="flex items-center gap-1">{notebook.icon} {notebook.name}</span>}
-          <span>·</span>
-          <span>Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
+        <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground min-w-0">
+          {onBack && (
+            <button onClick={onBack} className="shrink-0 p-1 -ml-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug naar lijst" aria-label="Terug naar lijst">
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          {notebook && <span className="flex items-center gap-1 truncate">{notebook.icon} {notebook.name}</span>}
+          <span className="hidden sm:inline">·</span>
+          <span className="hidden sm:inline truncate">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
         </div>
         <div className="flex items-center gap-1">
           {/* Mode toggle */}

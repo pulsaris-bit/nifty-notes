@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Pin, Lock, ArrowUpDown } from 'lucide-react';
+import { Search, Plus, Pin, Lock, ArrowUpDown, PanelLeftOpen } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -15,10 +15,13 @@ interface NoteListProps {
   onSearch: (q: string) => void;
   onSelectNote: (id: string) => void;
   onCreateNote: () => void;
+  showSidebarToggle?: boolean;
+  onOpenSidebar?: () => void;
 }
 
 export function NoteList({
   notes, notebooks, labels, activeNoteId, searchQuery, onSearch, onSelectNote, onCreateNote,
+  showSidebarToggle, onOpenSidebar,
 }: NoteListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('updatedAt');
   const getNotebookName = (id: string) => notebooks.find((nb) => nb.id === id)?.name || '';
@@ -47,10 +50,22 @@ export function NoteList({
   return (
     <div className="bg-note-list-bg border-r border-border flex flex-col h-full min-w-0">
       <div className="p-3 space-y-2">
-        <div className="relative">
-          <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={searchQuery} onChange={(e) => onSearch(e.target.value)} placeholder="Zoeken..."
-            className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          {showSidebarToggle && onOpenSidebar && (
+            <button
+              onClick={onOpenSidebar}
+              className="shrink-0 p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              title="Notitieboeken tonen"
+              aria-label="Notitieboeken tonen"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          )}
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={searchQuery} onChange={(e) => onSearch(e.target.value)} placeholder="Zoeken..."
+              className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground" />
+          </div>
         </div>
         <button onClick={onCreateNote}
           className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-md py-1.5 text-sm font-medium hover:opacity-90 transition-opacity">
