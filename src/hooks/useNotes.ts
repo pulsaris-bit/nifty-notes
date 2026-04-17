@@ -160,7 +160,8 @@ export function useNotes() {
         pinned: newNote.pinned, archived: newNote.archived, password: newNote.password, labelIds: newNote.labelIds,
       }}).catch((e) => console.error('createNote failed', e));
     }
-  }, [activeNotebookId, activeLabelId, notebooks]);
+    return newNote.id;
+  }, [activeNotebookId, activeLabelId]);
 
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
