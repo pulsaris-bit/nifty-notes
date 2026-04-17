@@ -6,6 +6,11 @@ import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  isEncrypted, isHashedPassword,
+  encryptPayload, decryptPayload,
+  hashPassword, verifyPassword,
+} from '@/lib/noteCrypto';
 
 interface NoteEditorProps {
   note: Note | null;
