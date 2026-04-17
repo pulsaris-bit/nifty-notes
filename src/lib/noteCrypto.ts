@@ -68,14 +68,15 @@ async function deriveKey(password: string, salt: BufferSource): Promise<CryptoKe
 }
 
 async function deriveBits(password: string, salt: BufferSource, bytes = 32): Promise<Uint8Array> {
-  const baseKey = await crypto.subtle.importKey(
+  const subtle = getSubtle();
+  const baseKey = await subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
     'PBKDF2',
     false,
     ['deriveBits'],
   );
-  const bits = await crypto.subtle.deriveBits(
+  const bits = await subtle.deriveBits(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
     baseKey,
     bytes * 8,
