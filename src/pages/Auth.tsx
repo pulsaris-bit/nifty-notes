@@ -121,7 +121,7 @@ const Auth = () => {
           <div className="w-12 h-12 rounded-xl bg-primary/20 grid place-items-center ring-1 ring-primary/40 shadow-[0_0_30px_hsl(var(--primary)/0.4)]">
             <BookOpen className="w-6 h-6 text-primary" />
           </div>
-          <h1 className="font-display text-2xl tracking-wide" style={{ color: 'hsl(var(--sidebar-fg-active))' }}>Notities</h1>
+          <h1 className="font-display text-2xl tracking-wide" style={{ color: 'hsl(var(--sidebar-fg-active))' }}>NiftyNotes</h1>
           <p className="text-sm text-center" style={{ color: 'hsl(var(--sidebar-fg))' }}>
             Meld je aan om je persoonlijke notities te beheren
           </p>
