@@ -26,7 +26,7 @@ function b64ToBuf(b64: string): Uint8Array {
 }
 
 // ---------- key derivation ----------
-async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveKey(password: string, salt: BufferSource): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
@@ -43,7 +43,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
   );
 }
 
-async function deriveBits(password: string, salt: Uint8Array, bytes = 32): Promise<Uint8Array> {
+async function deriveBits(password: string, salt: BufferSource, bytes = 32): Promise<Uint8Array> {
   const baseKey = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
@@ -74,7 +74,7 @@ export async function encryptPayload(payload: NotePayload, password: string): Pr
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv } as AesGcmParams, key, plaintext as BufferSource);
   return `${ENC_PREFIX}${bufToB64(salt)}:${bufToB64(iv)}:${bufToB64(ct)}`;
 }
 
