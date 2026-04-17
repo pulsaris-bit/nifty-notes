@@ -13,8 +13,11 @@ CREATE TABLE IF NOT EXISTS users (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email        TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Backfill column for existing databases
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- Roles in a separate table (security best practice)
 CREATE TABLE IF NOT EXISTS user_roles (
