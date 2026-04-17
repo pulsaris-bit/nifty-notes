@@ -216,6 +216,14 @@ const Index = () => {
           )}
         </div>
       )}
+
+      <SelectNotebookDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        notebooks={notebooks}
+        onPick={handlePickNotebookForNewNote}
+        onCreate={createNotebook}
+      />
     </div>
   );
 };
