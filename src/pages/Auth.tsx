@@ -103,24 +103,31 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] grid place-items-center bg-background px-4 py-10">
+    <div
+      className="min-h-[100dvh] grid place-items-center px-4 py-10 relative overflow-hidden"
+      style={{
+        backgroundColor: 'hsl(var(--sidebar-bg))',
+        backgroundImage:
+          'radial-gradient(ellipse 80% 50% at 50% -10%, hsl(var(--primary) / 0.25), transparent 70%), radial-gradient(ellipse 60% 50% at 100% 100%, hsl(var(--primary) / 0.12), transparent 70%)',
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative"
       >
         <div className="flex flex-col items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary grid place-items-center">
-            <BookOpen className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-xl bg-primary/20 grid place-items-center ring-1 ring-primary/40 shadow-[0_0_30px_hsl(var(--primary)/0.4)]">
+            <BookOpen className="w-6 h-6 text-primary" />
           </div>
-          <h1 className="font-display text-2xl text-foreground tracking-wide">Notities</h1>
-          <p className="text-sm text-muted-foreground text-center">
+          <h1 className="font-display text-2xl tracking-wide" style={{ color: 'hsl(var(--sidebar-fg-active))' }}>Notities</h1>
+          <p className="text-sm text-center" style={{ color: 'hsl(var(--sidebar-fg))' }}>
             Meld je aan om je persoonlijke notities te beheren
           </p>
         </div>
 
-        <Card className="shadow-sm border-border">
+        <Card className="shadow-2xl border-border/50 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')}>
               <TabsList className="grid w-full grid-cols-2">
