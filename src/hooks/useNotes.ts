@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Note, Notebook, Label } from '@/types/notes';
+import { HAS_API, api } from '@/lib/api';
+import { useMockAuth } from '@/hooks/useMockAuth';
 
 const LABEL_COLORS = [
   'hsl(0, 72%, 55%)',
@@ -47,15 +49,71 @@ const defaultNotes: Note[] = [
   },
 ];
 
+// API row → client Note
+function mapApiNote(r: any): Note {
+  return {
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    notebookId: r.notebookId,
+    labelIds: r.labelIds || [],
+    pinned: !!r.pinned,
+    archived: !!r.archived,
+    password: r.password ?? null,
+    createdAt: new Date(r.createdAt),
+    updatedAt: new Date(r.updatedAt),
+  };
+}
+
 export function useNotes() {
-  const [notebooks, setNotebooks] = useState<Notebook[]>(defaultNotebooks);
-  const [notes, setNotes] = useState<Note[]>(defaultNotes);
-  const [labels, setLabels] = useState<Label[]>(defaultLabels);
+  const { user } = useMockAuth();
+
+  const [notebooks, setNotebooks] = useState<Notebook[]>(HAS_API ? [] : defaultNotebooks);
+  const [notes, setNotes] = useState<Note[]>(HAS_API ? [] : defaultNotes);
+  const [labels, setLabels] = useState<Label[]>(HAS_API ? [] : defaultLabels);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>('n-1');
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(HAS_API ? null : 'n-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  // ---------- Initial load from API ----------
+  useEffect(() => {
+    if (!HAS_API || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [nbs, lbs, ns] = await Promise.all([
+          api<any[]>('/notebooks'),
+          api<any[]>('/labels'),
+          api<any[]>('/notes'),
+        ]);
+        if (cancelled) return;
+
+        // First-time bootstrap: seed defaults so the app isn't empty.
+        if (nbs.length === 0) {
+          for (const nb of defaultNotebooks) {
+            await api('/notebooks', { method: 'POST', body: nb });
+          }
+          setNotebooks(defaultNotebooks);
+        } else {
+          setNotebooks(nbs.map((n) => ({ id: n.id, name: n.name, icon: n.icon, color: n.color })));
+        }
+        if (lbs.length === 0) {
+          for (const lb of defaultLabels) {
+            await api('/labels', { method: 'POST', body: lb });
+          }
+          setLabels(defaultLabels);
+        } else {
+          setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
+        }
+        setNotes(ns.map(mapApiNote));
+      } catch (e) {
+        console.error('Failed to load data from API', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   const filteredNotes = notes.filter((note) => {
     if (showArchived) return note.archived;
@@ -91,23 +149,43 @@ export function useNotes() {
     };
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
+    if (HAS_API) {
+      api('/notes', { method: 'POST', body: {
+        id: newNote.id, notebookId: newNote.notebookId, title: newNote.title, content: newNote.content,
+        pinned: newNote.pinned, archived: newNote.archived, password: newNote.password, labelIds: newNote.labelIds,
+      }}).catch((e) => console.error('createNote failed', e));
+    }
   }, [activeNotebookId, activeLabelId, notebooks]);
 
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date() } : n))
     );
+    if (HAS_API) {
+      api(`/notes/${id}`, { method: 'PATCH', body: updates }).catch((e) => console.error('updateNote failed', e));
+    }
   }, []);
 
   const archiveNote = useCallback((id: string) => {
+    let nextArchived = false;
     setNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, archived: !n.archived, updatedAt: new Date() } : n))
+      prev.map((n) => {
+        if (n.id !== id) return n;
+        nextArchived = !n.archived;
+        return { ...n, archived: nextArchived, updatedAt: new Date() };
+      })
     );
+    if (HAS_API) {
+      api(`/notes/${id}`, { method: 'PATCH', body: { archived: nextArchived } }).catch((e) => console.error('archiveNote failed', e));
+    }
   }, []);
 
   const deleteNote = useCallback((id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     if (activeNoteId === id) setActiveNoteId(null);
+    if (HAS_API) {
+      api(`/notes/${id}`, { method: 'DELETE' }).catch((e) => console.error('deleteNote failed', e));
+    }
   }, [activeNoteId]);
 
   const createNotebook = useCallback((name: string, icon?: string) => {
@@ -118,16 +196,25 @@ export function useNotes() {
       color: `hsl(${Math.floor(Math.random() * 360)}, 60%, 45%)`,
     };
     setNotebooks((prev) => [...prev, newNb]);
+    if (HAS_API) {
+      api('/notebooks', { method: 'POST', body: newNb }).catch((e) => console.error('createNotebook failed', e));
+    }
   }, []);
 
   const updateNotebook = useCallback((id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => {
     setNotebooks((prev) => prev.map((nb) => (nb.id === id ? { ...nb, ...updates } : nb)));
+    if (HAS_API) {
+      api(`/notebooks/${id}`, { method: 'PATCH', body: updates }).catch((e) => console.error('updateNotebook failed', e));
+    }
   }, []);
 
   const deleteNotebook = useCallback((id: string) => {
     setNotebooks((prev) => prev.filter((nb) => nb.id !== id));
     setNotes((prev) => prev.filter((n) => n.notebookId !== id));
     if (activeNotebookId === id) setActiveNotebookId(null);
+    if (HAS_API) {
+      api(`/notebooks/${id}`, { method: 'DELETE' }).catch((e) => console.error('deleteNotebook failed', e));
+    }
   }, [activeNotebookId]);
 
   const createLabel = useCallback((name: string) => {
@@ -136,27 +223,41 @@ export function useNotes() {
     const color = available.length > 0 ? available[0] : LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)];
     const newLabel: Label = { id: `lb-${Date.now()}`, name, color };
     setLabels((prev) => [...prev, newLabel]);
+    if (HAS_API) {
+      api('/labels', { method: 'POST', body: newLabel }).catch((e) => console.error('createLabel failed', e));
+    }
     return newLabel;
   }, [labels]);
 
   const updateLabel = useCallback((id: string, updates: Partial<Pick<Label, 'name'>>) => {
     setLabels((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)));
+    if (HAS_API) {
+      api(`/labels/${id}`, { method: 'PATCH', body: updates }).catch((e) => console.error('updateLabel failed', e));
+    }
   }, []);
 
   const deleteLabel = useCallback((id: string) => {
     setLabels((prev) => prev.filter((l) => l.id !== id));
     setNotes((prev) => prev.map((n) => ({ ...n, labelIds: n.labelIds.filter((lid) => lid !== id) })));
     if (activeLabelId === id) setActiveLabelId(null);
+    if (HAS_API) {
+      api(`/labels/${id}`, { method: 'DELETE' }).catch((e) => console.error('deleteLabel failed', e));
+    }
   }, [activeLabelId]);
 
   const toggleNoteLabel = useCallback((noteId: string, labelId: string) => {
+    let nextLabelIds: string[] = [];
     setNotes((prev) =>
       prev.map((n) => {
         if (n.id !== noteId) return n;
         const has = n.labelIds.includes(labelId);
-        return { ...n, labelIds: has ? n.labelIds.filter((l) => l !== labelId) : [...n.labelIds, labelId], updatedAt: new Date() };
+        nextLabelIds = has ? n.labelIds.filter((l) => l !== labelId) : [...n.labelIds, labelId];
+        return { ...n, labelIds: nextLabelIds, updatedAt: new Date() };
       })
     );
+    if (HAS_API) {
+      api(`/notes/${noteId}`, { method: 'PATCH', body: { labelIds: nextLabelIds } }).catch((e) => console.error('toggleNoteLabel failed', e));
+    }
   }, []);
 
   return {
