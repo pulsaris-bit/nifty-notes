@@ -61,8 +61,9 @@ async function deriveBits(password: string, salt: BufferSource, bytes = 32): Pro
 }
 
 // ---------- public API: payload encrypt/decrypt ----------
+// Payload now contains only the note content. The title is intentionally
+// kept in plaintext so notes remain identifiable in lists/search.
 export interface NotePayload {
-  title: string;
   content: string;
 }
 
