@@ -295,9 +295,42 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
 
+  const daysInTrash = note.deletedAt
+    ? Math.max(0, Math.floor((Date.now() - note.deletedAt.getTime()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const daysLeft = Math.max(0, 30 - daysInTrash);
+
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
+      {trashMode && (
+        <div className="px-3 sm:px-6 py-2 bg-destructive/10 border-b border-destructive/30 text-xs text-destructive flex items-center justify-between gap-3 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <Trash2 size={13} />
+            In de prullenbak — wordt over {daysLeft} {daysLeft === 1 ? 'dag' : 'dagen'} definitief verwijderd
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onRestore?.(note.id)}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-background hover:bg-accent text-foreground transition-colors"
+              title="Terugzetten"
+            >
+              <RotateCcw size={12} /> Terugzetten
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Weet je zeker dat je deze notitie definitief wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.')) {
+                  onPurge?.(note.id);
+                }
+              }}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+              title="Definitief verwijderen"
+            >
+              <Trash2 size={12} /> Definitief verwijderen
+            </button>
+          </div>
+        </div>
+      )}
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground min-w-0">
