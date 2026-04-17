@@ -682,43 +682,44 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 }}
                 className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
                 placeholder="Schrijf in markdown..." />
-            ) : (
-              <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                {displayContent ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      input: ({ ...props }) => {
-                        if (props.type !== 'checkbox' || trashMode) {
-                          return <input {...props} />;
-                        }
-                        let checkboxIndex = -1;
-                        const before = displayContent.slice(0, displayContent.indexOf(props.checked ? '[x]' : '[ ]'));
-                        checkboxIndex = (before.match(/^\s*[-*+]\s+\[(?: |x|X)\]\s+/gm) || []).length;
-                        return (
-                          <input
-                            {...props}
-                            disabled={false}
-                            readOnly={false}
-                            className="cursor-pointer"
-                            onChange={() => toggleChecklistItemAtIndex(checkboxIndex)}
-                          />
-                        );
-                      },
-                    }}
-                  >{displayContent}</ReactMarkdown>
-                ) : (
-                  <p className="text-muted-foreground/50 italic">Geen inhoud</p>
-                )}
-              </div>
-            )}
-                  <p className="text-muted-foreground/50 italic">Geen inhoud</p>
-                )}
-              </div>
-            )}
+            ) : (() => {
+              let previewCheckboxIndex = -1;
+              return (
+                <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
+                  {displayContent ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        input: ({ ...props }) => {
+                          if (props.type !== 'checkbox' || trashMode) {
+                            return <input {...props} />;
+                          }
+                          previewCheckboxIndex += 1;
+                          const currentIndex = previewCheckboxIndex;
+                          return (
+                            <input
+                              {...props}
+                              disabled={false}
+                              readOnly={false}
+                              className="cursor-pointer"
+                              onChange={() => toggleChecklistItemAtIndex(currentIndex)}
+                            />
+                          );
+                        },
+                      }}
+                    >
+                      {displayContent}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
+    </motion.div>
     </motion.div>
   );
 }
