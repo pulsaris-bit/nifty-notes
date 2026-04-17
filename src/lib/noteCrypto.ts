@@ -96,16 +96,18 @@ export function isEncrypted(value: string | null | undefined): boolean {
 }
 
 export async function encryptPayload(payload: NotePayload, password: string): Promise<string> {
+  const subtle = getSubtle();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv } as AesGcmParams, key, plaintext as BufferSource);
+  const ct = await subtle.encrypt({ name: 'AES-GCM', iv } as AesGcmParams, key, plaintext as BufferSource);
   return `${ENC_PREFIX}${bufToB64(salt)}:${bufToB64(iv)}:${bufToB64(ct)}`;
 }
 
 export async function decryptPayload(blob: string, password: string): Promise<NotePayload> {
   if (!isEncrypted(blob)) throw new Error('Not an encrypted payload');
+  const subtle = getSubtle();
   const rest = blob.slice(ENC_PREFIX.length);
   const [saltB64, ivB64, ctB64] = rest.split(':');
   if (!saltB64 || !ivB64 || !ctB64) throw new Error('Malformed ciphertext');
@@ -115,7 +117,7 @@ export async function decryptPayload(blob: string, password: string): Promise<No
   const key = await deriveKey(password, salt);
   let plain: ArrayBuffer;
   try {
-    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+    plain = await subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
   } catch {
     throw new Error('Onjuist wachtwoord');
   }
