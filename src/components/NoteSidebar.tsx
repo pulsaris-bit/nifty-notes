@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, LogOut, Shield, User as UserIcon } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMockAuth } from '@/hooks/useMockAuth';
 
 const EMOJI_OPTIONS = [
   '📓', '📕', '📗', '📘', '📙', '📒', '💼', '💡', '🎯', '🏠',
@@ -234,6 +236,9 @@ export function NoteSidebar({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* User block */}
+      <UserBlock />
 
       {/* Version */}
       <div className="relative px-4 py-3">
