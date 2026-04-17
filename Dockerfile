@@ -15,6 +15,11 @@ RUN if [ -f package-lock.json ]; then \
 
 # Copy the rest of the source and build
 COPY . .
+
+# Inject API base URL at build time so the frontend talks to the API container
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 # ---------- Stage 2: serve the static build with nginx ----------
