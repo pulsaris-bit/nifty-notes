@@ -540,14 +540,25 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
-            <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
-              onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
+            <input
+              value={displayTitle}
+              onChange={(e) => {
+                if (isLocked && unlockedEntry) {
+                  void updateEncryptedField('title', e.target.value);
+                } else {
+                  onUpdate(note.id, { title: e.target.value });
+                }
+              }}
+              onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') {
+                if (isLocked && unlockedEntry) void updateEncryptedField('title', '');
+                else onUpdate(note.id, { title: '' });
+              } }}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
               placeholder="Titel..."
               readOnly={mode === 'preview'}
             />
             {mode === 'edit' ? (
-              <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
+              <textarea ref={contentRef} value={displayContent} onChange={handleContentChange}
                 onKeyDown={(e) => {
                   if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapSelection('**', '**', 'vetgedrukt'); return; }
                   if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
@@ -557,9 +568,13 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                     const ta = e.currentTarget;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
-                    const text = note!.content;
+                    const text = displayContent;
                     const newText = text.substring(0, start) + '\n\n' + text.substring(end);
-                    onUpdate(note!.id, { content: newText });
+                    if (isLocked && unlockedEntry) {
+                      void updateEncryptedField('content', newText);
+                    } else {
+                      onUpdate(note!.id, { content: newText });
+                    }
                     setTimeout(() => {
                       ta.focus();
                       const pos = start + 2;
@@ -571,8 +586,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 placeholder="Schrijf in markdown..." />
             ) : (
               <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                {note.content ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+                {displayContent ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
                 ) : (
                   <p className="text-muted-foreground/50 italic">Geen inhoud</p>
                 )}
