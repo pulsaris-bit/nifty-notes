@@ -127,7 +127,7 @@ const Auth = () => {
           </p>
         </div>
 
-        <Card className="shadow-sm border-border">
+        <Card className="shadow-2xl border-border/50 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'signup')}>
               <TabsList className="grid w-full grid-cols-2">
