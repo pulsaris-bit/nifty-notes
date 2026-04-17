@@ -635,7 +635,43 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             ) : (
               <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
                 {displayContent ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      input: ({ node, ...props }) => {
+                        if (props.type !== 'checkbox' || trashMode) {
+                          return <input {...props} />;
+                        }
+                        const pos = (node as any)?.position;
+                        return (
+                          <input
+                            {...props}
+                            disabled={false}
+                            className="cursor-pointer"
+                            onChange={() => {
+                              if (!pos || !note) return;
+                              const lineIdx = pos.start.line - 1;
+                              const lines = displayContent.split('\n');
+                              const line = lines[lineIdx];
+                              if (!line) return;
+                              const toggled = line.replace(
+                                /^(\s*[-*+]\s*\[)( |x|X)(\])/,
+                                (_m, a, c, b) => a + (c === ' ' ? 'x' : ' ') + b
+                              );
+                              if (toggled === line) return;
+                              lines[lineIdx] = toggled;
+                              const next = lines.join('\n');
+                              if (isLocked && unlockedEntry) {
+                                void updateEncryptedContent(next);
+                              } else {
+                                onUpdate(note.id, { content: next });
+                              }
+                            }}
+                          />
+                        );
+                      },
+                    }}
+                  >{displayContent}</ReactMarkdown>
                 ) : (
                   <p className="text-muted-foreground/50 italic">Geen inhoud</p>
                 )}
