@@ -307,6 +307,33 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     : 0;
   const daysLeft = Math.max(0, 30 - daysInTrash);
 
+  const updateNoteContent = (next: string) => {
+    if (isLocked && unlockedEntry) {
+      void updateEncryptedContent(next);
+    } else {
+      onUpdate(note.id, { content: next });
+    }
+  };
+
+  const toggleChecklistItemAtIndex = (targetIndex: number) => {
+    const lines = displayContent.split('\n');
+    let currentIndex = -1;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      if (/^\s*[-*+]\s+\[(?: |x|X)\]\s+/.test(lines[i])) {
+        currentIndex += 1;
+        if (currentIndex === targetIndex) {
+          lines[i] = lines[i].replace(/^((?:\s*[-*+]\s+\[)(?: |x|X)(\]\s+))/, (_m, start, end) => {
+            const isChecked = /\[[xX]\]\s+/.test(lines[i]);
+            return `${start}${isChecked ? ' ' : 'x'}${end}`;
+          });
+          updateNoteContent(lines.join('\n'));
+          return;
+        }
+      }
+    }
+  };
+
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
@@ -410,7 +437,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           <div className="relative">
             <button onClick={() => {
               if (isLocked && isUnlocked && note) {
-                // Re-lock: drop the in-memory plaintext, keep encryption + password as-is.
                 setUnlocked((prev) => {
                   const next = new Map(prev);
                   next.delete(note.id);
@@ -497,7 +523,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 onKeyDown={(e) => { if (e.key === 'Enter') handleUnlock(); }}
                 placeholder="Voer wachtwoord in..."
                 className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring text-center" />
-              {unlockError && <p className="text-xs text-destructive">{unlockError}</p>}
+              {unlockError && <p className="text-xs text-destructive">Onjuist wachtwoord</p>}
               <button onClick={handleUnlock}
                 className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-2 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
                 <ShieldCheck size={14} /> Ontgrendelen
@@ -623,27 +649,22 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
                     const text = displayContent;
-                    if (start !== end) return; // let default handle selection replace
+                    if (start !== end) return;
                     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
                     const currentLine = text.substring(lineStart, start);
-                    // Match: optional indent, then -, *, +, [ ], [x] OR "1. " style
                     const listMatch = currentLine.match(/^(\s*)([-*+]\s+\[(?: |x|X)\]\s+|[-*+]\s+|(\d+)\.\s+)(.*)$/);
-                    if (!listMatch) return; // default Enter
+                    if (!listMatch) return;
                     const [, indent, marker, numStr, rest] = listMatch;
                     e.preventDefault();
                     let nextText: string;
                     let nextCursor: number;
                     if (rest.length === 0) {
-                      // Empty list item -> remove the marker (exit the list)
                       const removeStart = lineStart;
                       nextText = text.substring(0, removeStart) + text.substring(start);
                       nextCursor = removeStart;
                     } else {
-                      // Continue list with a fresh marker
                       let nextMarker = marker;
-                      // Reset checkbox to unchecked
                       nextMarker = nextMarker.replace(/\[(x|X)\]/, '[ ]');
-                      // Increment numbered list
                       if (numStr) {
                         const n = parseInt(numStr, 10) + 1;
                         nextMarker = `${n}. `;
@@ -652,11 +673,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                       nextText = text.substring(0, start) + insertion + text.substring(end);
                       nextCursor = start + insertion.length;
                     }
-                    if (isLocked && unlockedEntry) {
-                      void updateEncryptedContent(nextText);
-                    } else {
-                      onUpdate(note!.id, { content: nextText });
-                    }
+                    updateNoteContent(nextText);
                     setTimeout(() => {
                       ta.focus();
                       ta.setSelectionRange(nextCursor, nextCursor);
@@ -665,51 +682,40 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 }}
                 className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
                 placeholder="Schrijf in markdown..." />
-            ) : (
-              <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                {displayContent ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      input: ({ node, ...props }) => {
-                        if (props.type !== 'checkbox' || trashMode) {
-                          return <input {...props} />;
-                        }
-                        const pos = (node as any)?.position;
-                        return (
-                          <input
-                            {...props}
-                            disabled={false}
-                            className="cursor-pointer"
-                            onChange={() => {
-                              if (!pos || !note) return;
-                              const lineIdx = pos.start.line - 1;
-                              const lines = displayContent.split('\n');
-                              const line = lines[lineIdx];
-                              if (!line) return;
-                              const toggled = line.replace(
-                                /^(\s*[-*+]\s*\[)( |x|X)(\])/,
-                                (_m, a, c, b) => a + (c === ' ' ? 'x' : ' ') + b
-                              );
-                              if (toggled === line) return;
-                              lines[lineIdx] = toggled;
-                              const next = lines.join('\n');
-                              if (isLocked && unlockedEntry) {
-                                void updateEncryptedContent(next);
-                              } else {
-                                onUpdate(note.id, { content: next });
-                              }
-                            }}
-                          />
-                        );
-                      },
-                    }}
-                  >{displayContent}</ReactMarkdown>
-                ) : (
-                  <p className="text-muted-foreground/50 italic">Geen inhoud</p>
-                )}
-              </div>
-            )}
+            ) : (() => {
+              let previewCheckboxIndex = -1;
+              return (
+                <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
+                  {displayContent ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        input: ({ ...props }) => {
+                          if (props.type !== 'checkbox' || trashMode) {
+                            return <input {...props} />;
+                          }
+                          previewCheckboxIndex += 1;
+                          const currentIndex = previewCheckboxIndex;
+                          return (
+                            <input
+                              {...props}
+                              disabled={false}
+                              readOnly={false}
+                              className="cursor-pointer"
+                              onChange={() => toggleChecklistItemAtIndex(currentIndex)}
+                            />
+                          );
+                        },
+                      }}
+                    >
+                      {displayContent}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-muted-foreground/50 italic">Geen inhoud</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
