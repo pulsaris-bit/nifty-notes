@@ -50,14 +50,15 @@ function b64ToBuf(b64: string): Uint8Array<ArrayBuffer> {
 
 // ---------- key derivation ----------
 async function deriveKey(password: string, salt: BufferSource): Promise<CryptoKey> {
-  const baseKey = await crypto.subtle.importKey(
+  const subtle = getSubtle();
+  const baseKey = await subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
     'PBKDF2',
     false,
     ['deriveKey'],
   );
-  return crypto.subtle.deriveKey(
+  return subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERS, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
