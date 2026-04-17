@@ -106,6 +106,14 @@ export function NoteSidebar({
         <Archive size={16} /><span className="flex-1 text-left">Archief</span>
       </button>
 
+      <button onClick={onToggleTrash}
+        className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
+          showTrash ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+        }`}>
+        <Trash2 size={16} /><span className="flex-1 text-left">Prullenbak</span>
+        {trashedCount > 0 && <span className="text-xs opacity-60">{trashedCount}</span>}
+      </button>
+
       <div className="mt-4 flex-1 overflow-y-auto custom-scrollbar space-y-3">
         {/* Notebooks */}
         <div>
