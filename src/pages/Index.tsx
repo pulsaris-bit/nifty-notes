@@ -24,9 +24,11 @@ const Index = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const {
-    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
-    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    searchQuery, showArchived, showTrash, trashedCount,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
+    createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
+    createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   } = useNotes();
 
@@ -93,10 +95,11 @@ const Index = () => {
     <NoteSidebar
       notebooks={notebooks} labels={labels}
       activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
-      showArchived={showArchived}
-      onSelectNotebook={(id) => { setActiveNotebookId(id); if (!isDesktop) setDrawerOpen(false); }}
-      onSelectLabel={(id) => { setActiveLabelId(id); if (!isDesktop) setDrawerOpen(false); }}
-      onToggleArchived={() => { setShowArchived(!showArchived); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
+      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount}
+      onSelectNotebook={(id) => { setActiveNotebookId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
+      onSelectLabel={(id) => { setActiveLabelId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
+      onToggleArchived={() => { setShowArchived(!showArchived); setShowTrash(false); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
+      onToggleTrash={() => { setShowTrash(!showTrash); setShowArchived(false); setActiveNotebookId(null); setActiveLabelId(null); setActiveNoteId(null); if (!isDesktop) setDrawerOpen(false); }}
       onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
       onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
       noteCountByNotebook={noteCountByNotebook}
@@ -164,6 +167,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle={showSidebarToggleInList}
               onOpenSidebar={() => setDesktopSidebarVisible(true)}
+              trashMode={showTrash}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -172,6 +176,7 @@ const Index = () => {
               note={activeNote} notebooks={notebooks} labels={labels}
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -185,6 +190,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
+              trashMode={showTrash}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -192,6 +198,7 @@ const Index = () => {
               note={activeNote} notebooks={notebooks} labels={labels}
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           </div>
         </div>
@@ -205,6 +212,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
+              trashMode={showTrash}
             />
           ) : (
             <NoteEditor
@@ -212,6 +220,7 @@ const Index = () => {
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               onBack={() => setMobileView('list')}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           )}
         </div>

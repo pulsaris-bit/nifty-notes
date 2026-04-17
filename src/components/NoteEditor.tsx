@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -22,6 +22,10 @@ interface NoteEditorProps {
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
   onBack?: () => void;
+  /** When true, the editor shows a read-only "in prullenbak" view with restore + permanent delete. */
+  trashMode?: boolean;
+  onRestore?: (id: string) => void;
+  onPurge?: (id: string) => void;
 }
 
 const headingOptions = [
@@ -33,7 +37,7 @@ const headingOptions = [
   { label: 'H5', prefix: '##### ', replace: true },
 ];
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack }: NoteEditorProps) {
+export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge }: NoteEditorProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -291,9 +295,42 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
 
+  const daysInTrash = note.deletedAt
+    ? Math.max(0, Math.floor((Date.now() - note.deletedAt.getTime()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const daysLeft = Math.max(0, 30 - daysInTrash);
+
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
+      {trashMode && (
+        <div className="px-3 sm:px-6 py-2 bg-destructive/10 border-b border-destructive/30 text-xs text-destructive flex items-center justify-between gap-3 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <Trash2 size={13} />
+            In de prullenbak — wordt over {daysLeft} {daysLeft === 1 ? 'dag' : 'dagen'} definitief verwijderd
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => onRestore?.(note.id)}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-background hover:bg-accent text-foreground transition-colors"
+              title="Terugzetten"
+            >
+              <RotateCcw size={12} /> Terugzetten
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Weet je zeker dat je deze notitie definitief wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.')) {
+                  onPurge?.(note.id);
+                }
+              }}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
+              title="Definitief verwijderen"
+            >
+              <Trash2 size={12} /> Definitief verwijderen
+            </button>
+          </div>
+        </div>
+      )}
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground min-w-0">
@@ -405,15 +442,19 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
             {note.pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          <button onClick={() => onArchive(note.id)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
-            {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-          </button>
-          <button onClick={() => onDelete(note.id)}
-            className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Verwijderen">
-            <Trash2 size={16} />
-          </button>
+          {!trashMode && (
+            <button onClick={() => onArchive(note.id)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
+              {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+            </button>
+          )}
+          {!trashMode && (
+            <button onClick={() => onDelete(note.id)}
+              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Naar prullenbak">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 

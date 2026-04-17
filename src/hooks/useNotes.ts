@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Note, Notebook, Label } from '@/types/notes';
+import { Note, Notebook, Label, TRASH_RETENTION_DAYS } from '@/types/notes';
 import { HAS_API, api } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
@@ -30,22 +30,22 @@ const defaultNotes: Note[] = [
   {
     id: 'n-1', title: 'Welkom bij je notities',
     content: 'Dit is je persoonlijke notitie-app. Maak notebooks aan, schrijf notities en houd alles overzichtelijk.\n\nProbeer het uit door een nieuwe notitie aan te maken!',
-    notebookId: 'nb-1', labelIds: ['lb-2'], createdAt: new Date(2024, 2, 15), updatedAt: new Date(2024, 2, 15), pinned: true, password: null, archived: false,
+    notebookId: 'nb-1', labelIds: ['lb-2'], createdAt: new Date(2024, 2, 15), updatedAt: new Date(2024, 2, 15), pinned: true, password: null, archived: false, deletedAt: null,
   },
   {
     id: 'n-2', title: 'Vergadering maandag',
     content: 'Agenda:\n- Q2 planning bespreken\n- Nieuwe projecten toewijzen\n- Teamuitje organiseren',
-    notebookId: 'nb-2', labelIds: ['lb-1', 'lb-2'], createdAt: new Date(2024, 2, 14), updatedAt: new Date(2024, 2, 14), pinned: false, password: null, archived: false,
+    notebookId: 'nb-2', labelIds: ['lb-1', 'lb-2'], createdAt: new Date(2024, 2, 14), updatedAt: new Date(2024, 2, 14), pinned: false, password: null, archived: false, deletedAt: null,
   },
   {
     id: 'n-3', title: 'App idee: Receptenplanner',
     content: 'Een app waarmee je weekmenu\'s kunt plannen en automatisch boodschappenlijstjes genereert.',
-    notebookId: 'nb-3', labelIds: ['lb-3'], createdAt: new Date(2024, 2, 13), updatedAt: new Date(2024, 2, 13), pinned: false, password: null, archived: false,
+    notebookId: 'nb-3', labelIds: ['lb-3'], createdAt: new Date(2024, 2, 13), updatedAt: new Date(2024, 2, 13), pinned: false, password: null, archived: false, deletedAt: null,
   },
   {
     id: 'n-4', title: 'Boodschappenlijst',
     content: '- Melk\n- Brood\n- Kaas\n- Appels\n- Pasta\n- Tomatensaus',
-    notebookId: 'nb-1', labelIds: [], createdAt: new Date(2024, 2, 12), updatedAt: new Date(2024, 2, 12), pinned: false, password: null, archived: false,
+    notebookId: 'nb-1', labelIds: [], createdAt: new Date(2024, 2, 12), updatedAt: new Date(2024, 2, 12), pinned: false, password: null, archived: false, deletedAt: null,
   },
 ];
 
@@ -62,20 +62,31 @@ function mapApiNote(r: any): Note {
     password: r.password ?? null,
     createdAt: new Date(r.createdAt),
     updatedAt: new Date(r.updatedAt),
+    deletedAt: r.deletedAt ? new Date(r.deletedAt) : null,
   };
+}
+
+const RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+/** Drop notes whose deletedAt is older than the retention window (mock-mode purge). */
+function purgeMockTrash(notes: Note[]): Note[] {
+  const cutoff = Date.now() - RETENTION_MS;
+  return notes.filter((n) => !n.deletedAt || n.deletedAt.getTime() >= cutoff);
 }
 
 export function useNotes() {
   const { user } = useMockAuth();
 
   const [notebooks, setNotebooks] = useState<Notebook[]>(HAS_API ? [] : defaultNotebooks);
-  const [notes, setNotes] = useState<Note[]>(HAS_API ? [] : defaultNotes);
+  // notes contains BOTH active and trashed notes — filtering happens in selectors below.
+  const [notes, setNotes] = useState<Note[]>(HAS_API ? [] : purgeMockTrash(defaultNotes));
   const [labels, setLabels] = useState<Label[]>(HAS_API ? [] : defaultLabels);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(HAS_API ? null : 'n-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
 
   // ---------- Initial load from API ----------
   useEffect(() => {
@@ -83,10 +94,14 @@ export function useNotes() {
     let cancelled = false;
     (async () => {
       try {
-        const [nbs, lbs, ns] = await Promise.all([
+        // Fire purge first (server also auto-purges, but this keeps it explicit on app start)
+        api('/notes/trash/purge', { method: 'POST' }).catch(() => undefined);
+
+        const [nbs, lbs, ns, trashed] = await Promise.all([
           api<any[]>('/notebooks'),
           api<any[]>('/labels'),
           api<any[]>('/notes'),
+          api<any[]>('/notes/trash'),
         ]);
         if (cancelled) return;
 
@@ -107,7 +122,7 @@ export function useNotes() {
         } else {
           setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
         }
-        setNotes(ns.map(mapApiNote));
+        setNotes([...ns.map(mapApiNote), ...trashed.map(mapApiNote)]);
       } catch (e) {
         console.error('Failed to load data from API', e);
       }
@@ -115,7 +130,27 @@ export function useNotes() {
     return () => { cancelled = true; };
   }, [user]);
 
-  const filteredNotes = notes.filter((note) => {
+  // Mock-mode purge on mount (HAS_API path is purged via API)
+  useEffect(() => {
+    if (HAS_API) return;
+    setNotes((prev) => {
+      const purged = purgeMockTrash(prev);
+      return purged.length === prev.length ? prev : purged;
+    });
+  }, []);
+
+  const activeNotes = notes.filter((n) => !n.deletedAt);
+  const trashedNotes = notes.filter((n) => !!n.deletedAt);
+
+  const filteredNotes = (showTrash ? trashedNotes : activeNotes).filter((note) => {
+    if (showTrash) {
+      // In trash, only apply the search filter
+      if (!searchQuery) return true;
+      return (
+        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     if (showArchived) return note.archived;
     if (note.archived) return false;
     const matchesNotebook = !activeNotebookId || note.notebookId === activeNotebookId;
@@ -128,6 +163,10 @@ export function useNotes() {
   });
 
   const sortedNotes = [...filteredNotes].sort((a, b) => {
+    if (showTrash) {
+      // Most recently deleted first
+      return (b.deletedAt?.getTime() ?? 0) - (a.deletedAt?.getTime() ?? 0);
+    }
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
@@ -151,6 +190,7 @@ export function useNotes() {
       pinned: false,
       password: null,
       archived: false,
+      deletedAt: null,
     };
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
@@ -186,11 +226,30 @@ export function useNotes() {
     }
   }, []);
 
+  // Soft-delete: move to trash (sets deletedAt). DELETE on the server soft-deletes.
   const deleteNote = useCallback((id: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+    const now = new Date();
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, deletedAt: now } : n)));
     if (activeNoteId === id) setActiveNoteId(null);
     if (HAS_API) {
       api(`/notes/${id}`, { method: 'DELETE' }).catch((e) => console.error('deleteNote failed', e));
+    }
+  }, [activeNoteId]);
+
+  // Restore from trash
+  const restoreNote = useCallback((id: string) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, deletedAt: null } : n)));
+    if (HAS_API) {
+      api(`/notes/${id}/restore`, { method: 'POST' }).catch((e) => console.error('restoreNote failed', e));
+    }
+  }, []);
+
+  // Permanent delete (only meaningful from the trash)
+  const purgeNote = useCallback((id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    if (activeNoteId === id) setActiveNoteId(null);
+    if (HAS_API) {
+      api(`/notes/${id}/permanent`, { method: 'DELETE' }).catch((e) => console.error('purgeNote failed', e));
     }
   }, [activeNoteId]);
 
@@ -268,9 +327,12 @@ export function useNotes() {
   }, []);
 
   return {
-    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
-    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    searchQuery, showArchived, showTrash,
+    trashedCount: trashedNotes.length,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
+    createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
+    createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   };
 }
