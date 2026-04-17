@@ -18,11 +18,13 @@ interface NoteListProps {
   onCreateNote: () => void;
   showSidebarToggle?: boolean;
   onOpenSidebar?: () => void;
+  /** When true, show trash UI: no "new note" button, list ordered by deletedAt. */
+  trashMode?: boolean;
 }
 
 export function NoteList({
   notes, notebooks, labels, activeNoteId, searchQuery, onSearch, onSelectNote, onCreateNote,
-  showSidebarToggle, onOpenSidebar,
+  showSidebarToggle, onOpenSidebar, trashMode = false,
 }: NoteListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('updatedAt');
   const getNotebookName = (id: string) => notebooks.find((nb) => nb.id === id)?.name || '';
