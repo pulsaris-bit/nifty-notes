@@ -720,6 +720,5 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         </>
       )}
     </motion.div>
-    </motion.div>
   );
 }
