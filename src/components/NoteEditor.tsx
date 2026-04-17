@@ -287,9 +287,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
-  const isLocked = !!note.password;
-  const isUnlocked = unlockedNotes.has(note.id);
-  const showLockedView = isLocked && !isUnlocked;
 
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
