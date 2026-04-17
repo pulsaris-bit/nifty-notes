@@ -6,6 +6,11 @@ import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  isEncrypted, isHashedPassword,
+  encryptPayload, decryptPayload,
+  hashPassword, verifyPassword,
+} from '@/lib/noteCrypto';
 
 interface NoteEditorProps {
   note: Note | null;
@@ -40,7 +45,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set());
+  // noteId -> derived plain content (only kept in memory for this session)
+  const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
 
   useEffect(() => {
     if (contentRef.current) {
@@ -61,14 +67,39 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
 
+  const isLocked = !!note?.password;
+  const unlockedEntry = note ? unlocked.get(note.id) : undefined;
+  const isUnlocked = !!unlockedEntry;
+  // Locked view appears whenever the content is encrypted and not yet unlocked this session.
+  const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
+
+  // Display value: when content is encrypted+unlocked, show plaintext from session map.
+  const displayContent = unlockedEntry ? unlockedEntry.content : note?.content ?? '';
+
+  const updateEncryptedContent = useCallback(
+    async (value: string) => {
+      if (!note || !unlockedEntry) return;
+      const next = { ...unlockedEntry, content: value };
+      setUnlocked((prev) => new Map(prev).set(note.id, next));
+      const blob = await encryptPayload({ content: next.content }, next.password);
+      onUpdate(note.id, { content: blob });
+    },
+    [note, unlockedEntry, onUpdate],
+  );
+
   const handleContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (!note) return;
-      onUpdate(note.id, { content: e.target.value });
+      const value = e.target.value;
       e.target.style.height = 'auto';
       e.target.style.height = e.target.scrollHeight + 'px';
+      if (isLocked && unlockedEntry) {
+        void updateEncryptedContent(value);
+      } else {
+        onUpdate(note.id, { content: value });
+      }
     },
-    [note, onUpdate]
+    [note, onUpdate, isLocked, unlockedEntry, updateEncryptedContent],
   );
 
   const insertAtCursor = useCallback((insertion: string) => {
@@ -165,31 +196,76 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setNewLabelName('');
   };
 
-  const handleSetPassword = () => {
+  const handleSetPassword = async () => {
     if (!note) return;
     if (lockPassword.length < 4) { setLockError('Minimaal 4 tekens'); return; }
     if (lockPassword !== lockConfirm) { setLockError('Wachtwoorden komen niet overeen'); return; }
-    onUpdate(note.id, { password: lockPassword });
-    setShowLockDialog(false);
-    setLockPassword('');
-    setLockConfirm('');
-    setLockError('');
+    try {
+      // Encrypt only the content under the new password; title stays plaintext.
+      const blob = await encryptPayload({ content: note.content }, lockPassword);
+      const verifier = await hashPassword(lockPassword);
+      // Remember plaintext content in session so the user can keep editing immediately
+      setUnlocked((prev) => new Map(prev).set(note.id, {
+        password: lockPassword,
+        content: note.content,
+      }));
+      onUpdate(note.id, { content: blob, password: verifier });
+      setShowLockDialog(false);
+      setLockPassword('');
+      setLockConfirm('');
+      setLockError('');
+    } catch (e) {
+      console.error('Encryption failed', e);
+      setLockError('Versleutelen mislukt');
+    }
   };
 
   const handleRemovePassword = () => {
     if (!note) return;
-    onUpdate(note.id, { password: null });
-    setUnlockedNotes((prev) => { const next = new Set(prev); next.delete(note.id); return next; });
+    const entry = unlocked.get(note.id);
+    // Restore plaintext content (we have it in the session map)
+    if (entry) {
+      onUpdate(note.id, { content: entry.content, password: null });
+    } else {
+      onUpdate(note.id, { password: null });
+    }
+    setUnlocked((prev) => { const next = new Map(prev); next.delete(note.id); return next; });
   };
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     if (!note) return;
-    if (unlockInput === note.password) {
-      setUnlockedNotes((prev) => new Set(prev).add(note.id));
+    const ok = await verifyPassword(unlockInput, note.password);
+    if (!ok) { setUnlockError('Onjuist wachtwoord'); return; }
+    try {
+      let plainContent = note.content;
+      if (isEncrypted(note.content)) {
+        const payload = await decryptPayload(note.content, unlockInput);
+        plainContent = payload.content;
+      }
+      setUnlocked((prev) => new Map(prev).set(note.id, {
+        password: unlockInput, content: plainContent,
+      }));
+
+      // --- Lazy migration ---
+      // Legacy notes had plaintext password + plaintext content (and possibly an encrypted
+      // title-blob from a previous version). Upgrade to hashed password + encrypted content.
+      const needsHashUpgrade = !isHashedPassword(note.password);
+      const needsEncryptUpgrade = !isEncrypted(note.content);
+      const titleWasEncrypted = isEncrypted(note.title);
+      if (needsHashUpgrade || needsEncryptUpgrade || titleWasEncrypted) {
+        const blob = await encryptPayload({ content: plainContent }, unlockInput);
+        const verifier = needsHashUpgrade ? await hashPassword(unlockInput) : (note.password as string);
+        const updates: Parameters<typeof onUpdate>[1] = { content: blob, password: verifier };
+        // If a previous version had encrypted the title, restore a placeholder title.
+        if (titleWasEncrypted) updates.title = 'Beveiligde notitie';
+        onUpdate(note.id, updates);
+      }
+
       setUnlockInput('');
       setUnlockError('');
-    } else {
-      setUnlockError('Onjuist wachtwoord');
+    } catch (e) {
+      console.error('Decrypt failed', e);
+      setUnlockError('Ontsleutelen mislukt');
     }
   };
 
@@ -211,9 +287,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
   const notebook = notebooks.find((nb) => nb.id === note.notebookId);
   const noteLabels = labels.filter((l) => note.labelIds.includes(l.id));
-  const isLocked = !!note.password;
-  const isUnlocked = unlockedNotes.has(note.id);
-  const showLockedView = isLocked && !isUnlocked;
 
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
@@ -467,14 +540,16 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
-            <input value={note.title} onChange={(e) => onUpdate(note.id, { title: e.target.value })}
+            <input
+              value={note.title}
+              onChange={(e) => onUpdate(note.id, { title: e.target.value })}
               onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
               placeholder="Titel..."
               readOnly={mode === 'preview'}
             />
             {mode === 'edit' ? (
-              <textarea ref={contentRef} value={note.content} onChange={handleContentChange}
+              <textarea ref={contentRef} value={displayContent} onChange={handleContentChange}
                 onKeyDown={(e) => {
                   if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapSelection('**', '**', 'vetgedrukt'); return; }
                   if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
@@ -484,9 +559,13 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                     const ta = e.currentTarget;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
-                    const text = note!.content;
+                    const text = displayContent;
                     const newText = text.substring(0, start) + '\n\n' + text.substring(end);
-                    onUpdate(note!.id, { content: newText });
+                    if (isLocked && unlockedEntry) {
+                      void updateEncryptedContent(newText);
+                    } else {
+                      onUpdate(note!.id, { content: newText });
+                    }
                     setTimeout(() => {
                       ta.focus();
                       const pos = start + 2;
@@ -498,8 +577,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                 placeholder="Schrijf in markdown..." />
             ) : (
               <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                {note.content ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+                {displayContent ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
                 ) : (
                   <p className="text-muted-foreground/50 italic">Geen inhoud</p>
                 )}
