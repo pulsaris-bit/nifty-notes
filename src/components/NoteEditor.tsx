@@ -201,16 +201,15 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     if (lockPassword.length < 4) { setLockError('Minimaal 4 tekens'); return; }
     if (lockPassword !== lockConfirm) { setLockError('Wachtwoorden komen niet overeen'); return; }
     try {
-      // Encrypt current plaintext title+content under the new password
-      const blob = await encryptPayload({ title: note.title, content: note.content }, lockPassword);
+      // Encrypt only the content under the new password; title stays plaintext.
+      const blob = await encryptPayload({ content: note.content }, lockPassword);
       const verifier = await hashPassword(lockPassword);
-      // Remember plaintext in session so the user can keep editing immediately
+      // Remember plaintext content in session so the user can keep editing immediately
       setUnlocked((prev) => new Map(prev).set(note.id, {
         password: lockPassword,
-        title: note.title,
         content: note.content,
       }));
-      onUpdate(note.id, { title: blob, content: blob, password: verifier });
+      onUpdate(note.id, { content: blob, password: verifier });
       setShowLockDialog(false);
       setLockPassword('');
       setLockConfirm('');
@@ -224,9 +223,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const handleRemovePassword = () => {
     if (!note) return;
     const entry = unlocked.get(note.id);
-    // Restore plaintext title+content (we have them in the session map)
+    // Restore plaintext content (we have it in the session map)
     if (entry) {
-      onUpdate(note.id, { title: entry.title, content: entry.content, password: null });
+      onUpdate(note.id, { content: entry.content, password: null });
     } else {
       onUpdate(note.id, { password: null });
     }
@@ -238,26 +237,28 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     const ok = await verifyPassword(unlockInput, note.password);
     if (!ok) { setUnlockError('Onjuist wachtwoord'); return; }
     try {
-      let plainTitle = note.title;
       let plainContent = note.content;
-      if (isEncrypted(note.title)) {
-        const payload = await decryptPayload(note.title, unlockInput);
-        plainTitle = payload.title;
+      if (isEncrypted(note.content)) {
+        const payload = await decryptPayload(note.content, unlockInput);
         plainContent = payload.content;
       }
       setUnlocked((prev) => new Map(prev).set(note.id, {
-        password: unlockInput, title: plainTitle, content: plainContent,
+        password: unlockInput, content: plainContent,
       }));
 
-      // --- Lazy migration: legacy notes with plaintext title/content + plain password ---
-      // If password was stored as plaintext (no hash: prefix) OR title is not yet encrypted,
-      // upgrade to hashed-password + encrypted blob now.
+      // --- Lazy migration ---
+      // Legacy notes had plaintext password + plaintext content (and possibly an encrypted
+      // title-blob from a previous version). Upgrade to hashed password + encrypted content.
       const needsHashUpgrade = !isHashedPassword(note.password);
-      const needsEncryptUpgrade = !isEncrypted(note.title);
-      if (needsHashUpgrade || needsEncryptUpgrade) {
-        const blob = await encryptPayload({ title: plainTitle, content: plainContent }, unlockInput);
+      const needsEncryptUpgrade = !isEncrypted(note.content);
+      const titleWasEncrypted = isEncrypted(note.title);
+      if (needsHashUpgrade || needsEncryptUpgrade || titleWasEncrypted) {
+        const blob = await encryptPayload({ content: plainContent }, unlockInput);
         const verifier = needsHashUpgrade ? await hashPassword(unlockInput) : (note.password as string);
-        onUpdate(note.id, { title: blob, content: blob, password: verifier });
+        const updates: Parameters<typeof onUpdate>[1] = { content: blob, password: verifier };
+        // If a previous version had encrypted the title, restore a placeholder title.
+        if (titleWasEncrypted) updates.title = 'Beveiligde notitie';
+        onUpdate(note.id, updates);
       }
 
       setUnlockInput('');
