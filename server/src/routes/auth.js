@@ -174,4 +174,40 @@ router.patch('/me', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(100),
+  newPassword: strongPassword,
+});
+
+router.post('/change-password', requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { currentPassword, newPassword } = parsed.data;
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: 'Nieuw wachtwoord moet verschillen van het huidige wachtwoord.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1 LIMIT 1',
+      [req.userId],
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Gebruiker niet gevonden.' });
+
+    const ok = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!ok) return res.status(401).json({ error: 'Huidig wachtwoord is onjuist.' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [newHash, req.userId],
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('change-password error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;
