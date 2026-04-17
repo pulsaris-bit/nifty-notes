@@ -11,6 +11,28 @@ const ENC_PREFIX = 'enc:v1:';
 const HASH_PREFIX = 'hash:v1:';
 const PBKDF2_ITERS = 200_000;
 
+// The Web Crypto API (`crypto.subtle`) is only available in "secure contexts":
+// HTTPS, or http://localhost / 127.0.0.1. When the app is served over plain
+// HTTP from a remote host (e.g. http://192.168.x.x:8080 in Docker), `crypto`
+// exists but `crypto.subtle` is `undefined`, which gives the cryptic
+// "Cannot read properties of undefined (reading 'importKey')" error.
+function getSubtle(): SubtleCrypto {
+  const subtle =
+    typeof crypto !== 'undefined' ? (crypto as Crypto).subtle : undefined;
+  if (!subtle) {
+    const isSecure =
+      typeof window !== 'undefined' ? window.isSecureContext : false;
+    const host =
+      typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+    throw new Error(
+      `Versleuteling is niet beschikbaar in deze omgeving (host: ${host}, secure context: ${isSecure}). ` +
+        `De Web Crypto API werkt alleen via HTTPS of via http://localhost. ` +
+        `Open de app via https:// of via http://localhost om notities te kunnen vergrendelen.`,
+    );
+  }
+  return subtle;
+}
+
 // ---------- base64 helpers ----------
 function bufToB64(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
