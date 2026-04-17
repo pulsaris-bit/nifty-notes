@@ -63,6 +63,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
+    // Re-lock any previously unlocked notes when switching notes:
+    // leaving a note must require the password again on return.
+    setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
     // Open new (empty) notes in edit mode, existing notes in preview
     setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
@@ -357,14 +360,19 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           {/* Lock button */}
           <div className="relative">
             <button onClick={() => {
-              if (isLocked && isUnlocked) {
-                handleRemovePassword();
+              if (isLocked && isUnlocked && note) {
+                // Re-lock: drop the in-memory plaintext, keep encryption + password as-is.
+                setUnlocked((prev) => {
+                  const next = new Map(prev);
+                  next.delete(note.id);
+                  return next;
+                });
               } else if (!isLocked) {
                 setShowLockDialog(true);
               }
             }}
               className={`p-1.5 rounded-md transition-colors ${isLocked ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              title={isLocked ? 'Beveiliging verwijderen' : 'Beveiligen met wachtwoord'}>
+              title={isLocked ? (isUnlocked ? 'Vergrendelen' : 'Beveiligd') : 'Beveiligen met wachtwoord'}>
               {isLocked ? <Lock size={16} /> : <LockOpen size={16} />}
             </button>
             {showLockDialog && (
