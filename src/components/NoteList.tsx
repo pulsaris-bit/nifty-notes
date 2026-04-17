@@ -3,6 +3,7 @@ import { Search, Plus, Pin, Lock, ArrowUpDown, PanelLeftOpen } from 'lucide-reac
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { isEncrypted } from '@/lib/noteCrypto';
 
 type SortOption = 'updatedAt' | 'createdAt' | 'title';
 
@@ -89,7 +90,11 @@ export function NoteList({
         {sortedNotes.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">Geen notities gevonden</div>
         ) : (
-          sortedNotes.map((note) => (
+          sortedNotes.map((note) => {
+            const encrypted = isEncrypted(note.title);
+            const titleDisplay = encrypted ? 'Beveiligde notitie' : note.title;
+            const previewDisplay = encrypted ? '••••••••' : (note.content || 'Lege notitie');
+            return (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
               className={`w-full text-left px-4 py-3 border-b border-border/60 transition-colors ${
                 activeNoteId === note.id ? 'bg-accent' : 'hover:bg-accent/40'
@@ -97,10 +102,10 @@ export function NoteList({
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
                 {note.password && <Lock size={12} className="text-muted-foreground mt-0.5 shrink-0" />}
-                <h3 className="text-base font-medium truncate flex-1">{note.title}</h3>
+                <h3 className="text-base font-medium truncate flex-1">{titleDisplay}</h3>
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                {note.content || 'Lege notitie'}
+                {previewDisplay}
               </p>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <span className="text-[10px] text-muted-foreground">
@@ -121,7 +126,8 @@ export function NoteList({
                 })}
               </div>
             </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>
