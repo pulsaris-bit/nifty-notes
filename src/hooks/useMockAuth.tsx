@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { HAS_API, api, setToken, getToken, ApiError } from '@/lib/api';
 
 export type MockRole = 'admin' | 'user';
 
@@ -9,6 +10,9 @@ export interface MockUser {
   avatarUrl: string | null;
   role: MockRole;
   createdAt: string;
+  bio?: string | null;
+  theme?: string;
+  language?: string;
 }
 
 interface StoredUser extends MockUser {
@@ -21,7 +25,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<{ error?: string }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   logout: () => void;
-  updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl'>>) => void;
+  updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => void;
 }
 
 const USERS_KEY = 'mock_auth_users';
@@ -29,6 +33,7 @@ const SESSION_KEY = 'mock_auth_session';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// ---------- localStorage helpers (mock mode) ----------
 function readUsers(): StoredUser[] {
   try {
     const raw = localStorage.getItem(USERS_KEY);
@@ -51,21 +56,50 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<MockUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ---------- Bootstrap session ----------
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (raw) {
-        const session = JSON.parse(raw) as { userId: string };
-        const stored = readUsers().find((u) => u.id === session.userId);
-        if (stored) setUser(stripPassword(stored));
+    let cancelled = false;
+    (async () => {
+      if (HAS_API) {
+        const token = getToken();
+        if (!token) { if (!cancelled) setLoading(false); return; }
+        try {
+          const { user: u } = await api<{ user: MockUser }>('/auth/me');
+          if (!cancelled) setUser(u);
+        } catch {
+          setToken(null);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+        return;
       }
-    } catch {
-      // ignore
-    }
-    setLoading(false);
+      // Mock fallback
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const session = JSON.parse(raw) as { userId: string };
+          const stored = readUsers().find((u) => u.id === session.userId);
+          if (stored) setUser(stripPassword(stored));
+        }
+      } catch { /* ignore */ }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (HAS_API) {
+      try {
+        const { token, user: u } = await api<{ token: string; user: MockUser }>('/auth/login', {
+          method: 'POST', body: { email, password }, auth: false,
+        });
+        setToken(token);
+        setUser(u);
+        return {};
+      } catch (e) {
+        return { error: e instanceof ApiError ? e.message : 'Inloggen mislukt' };
+      }
+    }
     const users = readUsers();
     const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!found) return { error: 'Geen account gevonden met dit e-mailadres.' };
@@ -76,6 +110,18 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, displayName: string) => {
+    if (HAS_API) {
+      try {
+        const { token, user: u } = await api<{ token: string; user: MockUser }>('/auth/signup', {
+          method: 'POST', body: { email, password, displayName }, auth: false,
+        });
+        setToken(token);
+        setUser(u);
+        return {};
+      } catch (e) {
+        return { error: e instanceof ApiError ? e.message : 'Registratie mislukt' };
+      }
+    }
     const users = readUsers();
     if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return { error: 'Er bestaat al een account met dit e-mailadres.' };
@@ -98,12 +144,23 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
+    if (HAS_API) {
+      setToken(null);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
     setUser(null);
   }, []);
 
   const updateProfile = useCallback(
-    (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl'>>) => {
+    (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => {
+      if (HAS_API) {
+        setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+        api('/auth/me', { method: 'PATCH', body: updates }).catch((e) => {
+          console.error('updateProfile failed', e);
+        });
+        return;
+      }
       setUser((prev) => {
         if (!prev) return prev;
         const next = { ...prev, ...updates };
