@@ -680,7 +680,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                     }, 0);
                   }
                 }}
-                className="w-full bg-transparent outline-none resize-none text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
+                className="w-full bg-transparent outline-none resize-none text-base md:text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
                 placeholder="Schrijf in markdown..." />
             ) : (() => {
               let previewCheckboxIndex = -1;
