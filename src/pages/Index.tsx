@@ -43,7 +43,17 @@ const Index = () => {
   };
 
   const handleCreateNote = () => {
+    if (!activeNotebookId) {
+      setPickerOpen(true);
+      return;
+    }
     createNote();
+    if (isMobile) setMobileView('editor');
+  };
+
+  const handlePickNotebookForNewNote = (notebookId: string) => {
+    setActiveNotebookId(notebookId);
+    createNote(notebookId);
     if (isMobile) setMobileView('editor');
   };
 
