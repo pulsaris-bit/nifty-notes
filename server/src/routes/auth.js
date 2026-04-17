@@ -6,9 +6,19 @@ import { signToken, requireAuth } from '../auth.js';
 
 const router = Router();
 
+// Modern password policy — keep in sync with src/lib/passwordPolicy.ts
+const strongPassword = z.string()
+  .min(12, 'Wachtwoord moet minimaal 12 tekens zijn')
+  .max(100, 'Wachtwoord mag maximaal 100 tekens zijn')
+  .regex(/[a-z]/, 'Wachtwoord moet minstens één kleine letter bevatten')
+  .regex(/[A-Z]/, 'Wachtwoord moet minstens één hoofdletter bevatten')
+  .regex(/[0-9]/, 'Wachtwoord moet minstens één cijfer bevatten')
+  .regex(/[^A-Za-z0-9]/, 'Wachtwoord moet minstens één speciaal teken bevatten')
+  .refine((v) => !/\s/.test(v), 'Wachtwoord mag geen spaties bevatten');
+
 const signupSchema = z.object({
   email: z.string().trim().email().max(255),
-  password: z.string().min(6).max(100),
+  password: strongPassword,
   displayName: z.string().trim().min(2).max(50),
 });
 
