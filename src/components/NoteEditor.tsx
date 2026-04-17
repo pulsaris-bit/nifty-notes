@@ -442,15 +442,19 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
             {note.pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          <button onClick={() => onArchive(note.id)}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
-            {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-          </button>
-          <button onClick={() => onDelete(note.id)}
-            className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Verwijderen">
-            <Trash2 size={16} />
-          </button>
+          {!trashMode && (
+            <button onClick={() => onArchive(note.id)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
+              {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+            </button>
+          )}
+          {!trashMode && (
+            <button onClick={() => onDelete(note.id)}
+              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Naar prullenbak">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 
