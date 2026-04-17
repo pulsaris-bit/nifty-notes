@@ -57,7 +57,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
-    setMode('preview');
+    // Open new (empty) notes in edit mode, existing notes in preview
+    setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
 
   const handleContentChange = useCallback(
