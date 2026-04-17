@@ -42,6 +42,12 @@ async function start() {
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
+  // Lightweight runtime migrations (idempotent) for existing databases
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()");
+  } catch (e) {
+    console.warn('migration warning:', e.message);
+  }
   app.listen(PORT, () => console.log(`API listening on :${PORT}`));
 }
 
