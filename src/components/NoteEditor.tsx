@@ -197,31 +197,75 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setNewLabelName('');
   };
 
-  const handleSetPassword = () => {
+  const handleSetPassword = async () => {
     if (!note) return;
     if (lockPassword.length < 4) { setLockError('Minimaal 4 tekens'); return; }
     if (lockPassword !== lockConfirm) { setLockError('Wachtwoorden komen niet overeen'); return; }
-    onUpdate(note.id, { password: lockPassword });
-    setShowLockDialog(false);
-    setLockPassword('');
-    setLockConfirm('');
-    setLockError('');
+    try {
+      // Encrypt current plaintext title+content under the new password
+      const blob = await encryptPayload({ title: note.title, content: note.content }, lockPassword);
+      const verifier = await hashPassword(lockPassword);
+      // Remember plaintext in session so the user can keep editing immediately
+      setUnlocked((prev) => new Map(prev).set(note.id, {
+        password: lockPassword,
+        title: note.title,
+        content: note.content,
+      }));
+      onUpdate(note.id, { title: blob, content: blob, password: verifier });
+      setShowLockDialog(false);
+      setLockPassword('');
+      setLockConfirm('');
+      setLockError('');
+    } catch (e) {
+      console.error('Encryption failed', e);
+      setLockError('Versleutelen mislukt');
+    }
   };
 
   const handleRemovePassword = () => {
     if (!note) return;
-    onUpdate(note.id, { password: null });
-    setUnlockedNotes((prev) => { const next = new Set(prev); next.delete(note.id); return next; });
+    const entry = unlocked.get(note.id);
+    // Restore plaintext title+content (we have them in the session map)
+    if (entry) {
+      onUpdate(note.id, { title: entry.title, content: entry.content, password: null });
+    } else {
+      onUpdate(note.id, { password: null });
+    }
+    setUnlocked((prev) => { const next = new Map(prev); next.delete(note.id); return next; });
   };
 
-  const handleUnlock = () => {
+  const handleUnlock = async () => {
     if (!note) return;
-    if (unlockInput === note.password) {
-      setUnlockedNotes((prev) => new Set(prev).add(note.id));
+    const ok = await verifyPassword(unlockInput, note.password);
+    if (!ok) { setUnlockError('Onjuist wachtwoord'); return; }
+    try {
+      let plainTitle = note.title;
+      let plainContent = note.content;
+      if (isEncrypted(note.title)) {
+        const payload = await decryptPayload(note.title, unlockInput);
+        plainTitle = payload.title;
+        plainContent = payload.content;
+      }
+      setUnlocked((prev) => new Map(prev).set(note.id, {
+        password: unlockInput, title: plainTitle, content: plainContent,
+      }));
+
+      // --- Lazy migration: legacy notes with plaintext title/content + plain password ---
+      // If password was stored as plaintext (no hash: prefix) OR title is not yet encrypted,
+      // upgrade to hashed-password + encrypted blob now.
+      const needsHashUpgrade = !isHashedPassword(note.password);
+      const needsEncryptUpgrade = !isEncrypted(note.title);
+      if (needsHashUpgrade || needsEncryptUpgrade) {
+        const blob = await encryptPayload({ title: plainTitle, content: plainContent }, unlockInput);
+        const verifier = needsHashUpgrade ? await hashPassword(unlockInput) : (note.password as string);
+        onUpdate(note.id, { title: blob, content: blob, password: verifier });
+      }
+
       setUnlockInput('');
       setUnlockError('');
-    } else {
-      setUnlockError('Onjuist wachtwoord');
+    } catch (e) {
+      console.error('Decrypt failed', e);
+      setUnlockError('Ontsleutelen mislukt');
     }
   };
 
