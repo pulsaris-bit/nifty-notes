@@ -63,6 +63,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
+    // Re-lock any previously unlocked notes when switching notes:
+    // leaving a note must require the password again on return.
+    setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
     // Open new (empty) notes in edit mode, existing notes in preview
     setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
