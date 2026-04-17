@@ -148,16 +148,23 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     const end = ta.selectionEnd;
     const text = note.content;
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-    const lastLineStart = text.lastIndexOf('\n', end - 1) + 1;
     // Get all lines in selection
     const beforeLines = text.substring(0, lineStart);
     const lineEnd = text.indexOf('\n', end);
     const actualEnd = lineEnd === -1 ? text.length : lineEnd;
     const selectedLines = text.substring(lineStart, actualEnd);
-    const newLines = selectedLines.split('\n').map((line) => prefix + line).join('\n');
+    const splitLines = selectedLines.split('\n');
+    const newLines = splitLines.map((line) => prefix + line).join('\n');
     const newText = beforeLines + newLines + text.substring(actualEnd);
     onUpdate(note.id, { content: newText });
-    setTimeout(() => { ta.focus(); }, 0);
+    // Move cursor/selection so it lands AFTER the inserted prefix(es), not before.
+    const totalPrefix = prefix.length * splitLines.length;
+    const newStart = start + prefix.length;
+    const newEnd = end + totalPrefix;
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(newStart, newEnd);
+    }, 0);
   }, [note, onUpdate]);
 
   const applyHeading = useCallback((prefix: string) => {
