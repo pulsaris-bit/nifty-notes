@@ -17,9 +17,12 @@ interface NoteSidebarProps {
   activeNotebookId: string | null;
   activeLabelId: string | null;
   showArchived: boolean;
+  showTrash: boolean;
+  trashedCount: number;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
   onToggleArchived: () => void;
+  onToggleTrash: () => void;
   onCreateNotebook: (name: string, icon?: string) => void;
   onUpdateNotebook: (id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => void;
   onDeleteNotebook: (id: string) => void;
@@ -31,8 +34,8 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  notebooks, labels, activeNotebookId, activeLabelId, showArchived,
-  onSelectNotebook, onSelectLabel, onToggleArchived,
+  notebooks, labels, activeNotebookId, activeLabelId, showArchived, showTrash, trashedCount,
+  onSelectNotebook, onSelectLabel, onToggleArchived, onToggleTrash,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, onCollapse,
