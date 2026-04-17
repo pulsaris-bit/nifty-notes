@@ -45,7 +45,7 @@ export function NoteSidebar({
   const [newLabelName, setNewLabelName] = useState('');
   const [nbExpanded, setNbExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
-  const [showVersion, setShowVersion] = useState(false);
+  
   const [editingNbId, setEditingNbId] = useState<string | null>(null);
   const [editNbName, setEditNbName] = useState('');
   const [editNbEmoji, setEditNbEmoji] = useState('');
