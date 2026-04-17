@@ -205,6 +205,7 @@ export function useNotes() {
     if (HAS_API) {
       api('/notebooks', { method: 'POST', body: newNb }).catch((e) => console.error('createNotebook failed', e));
     }
+    return newNb;
   }, []);
 
   const updateNotebook = useCallback((id: string, updates: Partial<Pick<Notebook, 'name' | 'icon'>>) => {
