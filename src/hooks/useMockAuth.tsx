@@ -26,6 +26,7 @@ interface AuthContextValue {
   signup: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error?: string }>;
 }
 
 const USERS_KEY = 'mock_auth_users';
