@@ -26,6 +26,7 @@ interface AuthContextValue {
   signup: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error?: string }>;
 }
 
 const USERS_KEY = 'mock_auth_users';
@@ -172,8 +173,31 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    if (HAS_API) {
+      try {
+        await api('/auth/change-password', {
+          method: 'POST',
+          body: { currentPassword, newPassword },
+        });
+        return {};
+      } catch (e) {
+        return { error: e instanceof ApiError ? e.message : 'Wachtwoord wijzigen mislukt' };
+      }
+    }
+    // Mock fallback (localStorage)
+    const users = readUsers();
+    const idx = user ? users.findIndex((u) => u.id === user.id) : -1;
+    if (idx === -1) return { error: 'Niet ingelogd.' };
+    if (users[idx].password !== currentPassword) return { error: 'Huidig wachtwoord is onjuist.' };
+    if (currentPassword === newPassword) return { error: 'Nieuw wachtwoord moet verschillen van het huidige wachtwoord.' };
+    users[idx] = { ...users[idx], password: newPassword };
+    writeUsers(users);
+    return {};
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateProfile, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
