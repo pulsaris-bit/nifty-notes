@@ -70,27 +70,38 @@ export function NoteList({
               className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground" />
           </div>
         </div>
-        <button onClick={onCreateNote}
-          className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-md py-1.5 text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus size={15} />Nieuwe notitie
-        </button>
-        <div className="flex items-center gap-1.5">
-          <ArrowUpDown size={12} className="text-muted-foreground shrink-0" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="flex-1 text-xs bg-background border border-border rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-ring text-muted-foreground cursor-pointer"
-          >
-            {Object.entries(sortLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
+        {!trashMode && (
+          <button onClick={onCreateNote}
+            className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-md py-1.5 text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus size={15} />Nieuwe notitie
+          </button>
+        )}
+        {!trashMode && (
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown size={12} className="text-muted-foreground shrink-0" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="flex-1 text-xs bg-background border border-border rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-ring text-muted-foreground cursor-pointer"
+            >
+              {Object.entries(sortLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {trashMode && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Notities worden na 30 dagen automatisch definitief verwijderd.
+          </p>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {sortedNotes.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">Geen notities gevonden</div>
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            {trashMode ? 'Prullenbak is leeg' : 'Geen notities gevonden'}
+          </div>
         ) : (
           sortedNotes.map((note) => {
             const encrypted = isEncrypted(note.content);
