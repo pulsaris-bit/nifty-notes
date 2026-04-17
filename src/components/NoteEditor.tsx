@@ -332,16 +332,18 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         </div>
       )}
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
-        <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground min-w-0">
-          {onBack && (
-            <button onClick={onBack} className="shrink-0 p-1 -ml-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug naar lijst" aria-label="Terug naar lijst">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          {notebook && <span className="flex items-center gap-1 truncate">{notebook.icon} {notebook.name}</span>}
-          <span className="hidden sm:inline">·</span>
-          <span className="hidden sm:inline truncate">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+      <div className="flex items-start lg:items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-3 text-xs text-muted-foreground min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            {onBack && (
+              <button onClick={onBack} className="shrink-0 p-1 -ml-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Terug naar lijst" aria-label="Terug naar lijst">
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
+            <span className="hidden lg:inline">·</span>
+          </div>
+          <span className="truncate pl-7 lg:pl-0">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
         </div>
         <div className="flex items-center gap-1">
           {/* Mode toggle */}
