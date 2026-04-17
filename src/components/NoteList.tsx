@@ -91,8 +91,7 @@ export function NoteList({
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">Geen notities gevonden</div>
         ) : (
           sortedNotes.map((note) => {
-            const encrypted = isEncrypted(note.title);
-            const titleDisplay = encrypted ? 'Beveiligde notitie' : note.title;
+            const encrypted = isEncrypted(note.content);
             const previewDisplay = encrypted ? '••••••••' : (note.content || 'Lege notitie');
             return (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
@@ -102,7 +101,7 @@ export function NoteList({
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
                 {note.password && <Lock size={12} className="text-muted-foreground mt-0.5 shrink-0" />}
-                <h3 className="text-base font-medium truncate flex-1">{titleDisplay}</h3>
+                <h3 className="text-base font-medium truncate flex-1">{note.title}</h3>
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                 {previewDisplay}

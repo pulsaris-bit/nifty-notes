@@ -426,7 +426,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
               <Lock size={28} className="text-muted-foreground" />
             </div>
-            <h3 className="font-display text-xl mb-1">{isEncrypted(note.title) ? 'Beveiligde notitie' : note.title}</h3>
+            <h3 className="font-display text-xl mb-1">{note.title}</h3>
             <p className="text-sm text-muted-foreground mb-4">Deze notitie is beveiligd met een wachtwoord</p>
             <div className="space-y-2">
               <input type="password" value={unlockInput} onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
