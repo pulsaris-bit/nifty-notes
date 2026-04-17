@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
+import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
 import { useNotes } from '@/hooks/useNotes';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
