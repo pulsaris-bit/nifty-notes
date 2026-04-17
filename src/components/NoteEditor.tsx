@@ -541,18 +541,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           {/* Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
             <input
-              value={displayTitle}
-              onChange={(e) => {
-                if (isLocked && unlockedEntry) {
-                  void updateEncryptedField('title', e.target.value);
-                } else {
-                  onUpdate(note.id, { title: e.target.value });
-                }
-              }}
-              onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') {
-                if (isLocked && unlockedEntry) void updateEncryptedField('title', '');
-                else onUpdate(note.id, { title: '' });
-              } }}
+              value={note.title}
+              onChange={(e) => onUpdate(note.id, { title: e.target.value })}
+              onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
               placeholder="Titel..."
               readOnly={mode === 'preview'}
@@ -571,7 +562,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                     const text = displayContent;
                     const newText = text.substring(0, start) + '\n\n' + text.substring(end);
                     if (isLocked && unlockedEntry) {
-                      void updateEncryptedField('content', newText);
+                      void updateEncryptedContent(newText);
                     } else {
                       onUpdate(note!.id, { content: newText });
                     }
