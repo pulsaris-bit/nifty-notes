@@ -619,21 +619,47 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                   if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
                   if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)', 'linktekst'); return; }
                   if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
                     const ta = e.currentTarget;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
                     const text = displayContent;
-                    const newText = text.substring(0, start) + '\n\n' + text.substring(end);
-                    if (isLocked && unlockedEntry) {
-                      void updateEncryptedContent(newText);
+                    if (start !== end) return; // let default handle selection replace
+                    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+                    const currentLine = text.substring(lineStart, start);
+                    // Match: optional indent, then -, *, +, [ ], [x] OR "1. " style
+                    const listMatch = currentLine.match(/^(\s*)([-*+]\s+\[(?: |x|X)\]\s+|[-*+]\s+|(\d+)\.\s+)(.*)$/);
+                    if (!listMatch) return; // default Enter
+                    const [, indent, marker, numStr, rest] = listMatch;
+                    e.preventDefault();
+                    let nextText: string;
+                    let nextCursor: number;
+                    if (rest.length === 0) {
+                      // Empty list item -> remove the marker (exit the list)
+                      const removeStart = lineStart;
+                      nextText = text.substring(0, removeStart) + text.substring(start);
+                      nextCursor = removeStart;
                     } else {
-                      onUpdate(note!.id, { content: newText });
+                      // Continue list with a fresh marker
+                      let nextMarker = marker;
+                      // Reset checkbox to unchecked
+                      nextMarker = nextMarker.replace(/\[(x|X)\]/, '[ ]');
+                      // Increment numbered list
+                      if (numStr) {
+                        const n = parseInt(numStr, 10) + 1;
+                        nextMarker = `${n}. `;
+                      }
+                      const insertion = '\n' + indent + nextMarker;
+                      nextText = text.substring(0, start) + insertion + text.substring(end);
+                      nextCursor = start + insertion.length;
+                    }
+                    if (isLocked && unlockedEntry) {
+                      void updateEncryptedContent(nextText);
+                    } else {
+                      onUpdate(note!.id, { content: nextText });
                     }
                     setTimeout(() => {
                       ta.focus();
-                      const pos = start + 2;
-                      ta.setSelectionRange(pos, pos);
+                      ta.setSelectionRange(nextCursor, nextCursor);
                     }, 0);
                   }
                 }}
