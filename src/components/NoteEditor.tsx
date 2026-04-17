@@ -45,7 +45,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-  const [unlockedNotes, setUnlockedNotes] = useState<Set<string>>(new Set());
+  // noteId -> derived plain payload (only kept in memory for this session)
+  const [unlocked, setUnlocked] = useState<Map<string, { password: string; title: string; content: string }>>(new Map());
 
   useEffect(() => {
     if (contentRef.current) {
@@ -66,14 +67,40 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
 
+  const isLocked = !!note?.password;
+  const unlockedEntry = note ? unlocked.get(note.id) : undefined;
+  const isUnlocked = !!unlockedEntry;
+  const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.title);
+
+  // Display values: when encrypted+unlocked, show plaintext from session map
+  const displayTitle = unlockedEntry ? unlockedEntry.title : note?.title ?? '';
+  const displayContent = unlockedEntry ? unlockedEntry.content : note?.content ?? '';
+
+  const updateEncryptedField = useCallback(
+    async (field: 'title' | 'content', value: string) => {
+      if (!note || !unlockedEntry) return;
+      const next = { ...unlockedEntry, [field]: value };
+      setUnlocked((prev) => new Map(prev).set(note.id, next));
+      const blob = await encryptPayload({ title: next.title, content: next.content }, next.password);
+      // Both fields share the same blob (it contains title+content together).
+      onUpdate(note.id, { title: blob, content: blob });
+    },
+    [note, unlockedEntry, onUpdate],
+  );
+
   const handleContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (!note) return;
-      onUpdate(note.id, { content: e.target.value });
+      const value = e.target.value;
       e.target.style.height = 'auto';
       e.target.style.height = e.target.scrollHeight + 'px';
+      if (isLocked && unlockedEntry) {
+        void updateEncryptedField('content', value);
+      } else {
+        onUpdate(note.id, { content: value });
+      }
     },
-    [note, onUpdate]
+    [note, onUpdate, isLocked, unlockedEntry, updateEncryptedField],
   );
 
   const insertAtCursor = useCallback((insertion: string) => {
