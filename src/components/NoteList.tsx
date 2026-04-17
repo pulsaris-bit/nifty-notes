@@ -126,7 +126,8 @@ export function NoteList({
                 })}
               </div>
             </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>
