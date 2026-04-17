@@ -167,6 +167,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle={showSidebarToggleInList}
               onOpenSidebar={() => setDesktopSidebarVisible(true)}
+              trashMode={showTrash}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -175,6 +176,7 @@ const Index = () => {
               note={activeNote} notebooks={notebooks} labels={labels}
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -188,6 +190,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
+              trashMode={showTrash}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -195,6 +198,7 @@ const Index = () => {
               note={activeNote} notebooks={notebooks} labels={labels}
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           </div>
         </div>
@@ -208,6 +212,7 @@ const Index = () => {
               onSearch={setSearchQuery} onSelectNote={handleSelectNote} onCreateNote={handleCreateNote}
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
+              trashMode={showTrash}
             />
           ) : (
             <NoteEditor
@@ -215,6 +220,7 @@ const Index = () => {
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               onBack={() => setMobileView('list')}
+              trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
             />
           )}
         </div>
