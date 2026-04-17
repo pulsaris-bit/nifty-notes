@@ -370,7 +370,10 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             {showLockDialog && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowLockDialog(false)} />
-                <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50 p-4">
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50 p-4">
                   <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5"><Lock size={14} /> Notitie beveiligen</h4>
                   <div className="space-y-2">
                     <input type="password" value={lockPassword} onChange={(e) => { setLockPassword(e.target.value); setLockError(''); }}
