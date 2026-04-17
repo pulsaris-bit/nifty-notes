@@ -6,12 +6,12 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies first (better layer caching)
-COPY package.json package-lock.json* bun.lockb* ./
-RUN if [ -f package-lock.json ]; then \
-      npm ci; \
-    else \
-      npm install; \
-    fi
+# Note: we intentionally do NOT copy lockfiles. Lovable manages bun.lockb /
+# package-lock.json and they can drift from package.json between environments,
+# which makes `npm ci` fail inside Docker. `npm install` regenerates a fresh
+# tree from package.json and is reliable for container builds.
+COPY package.json ./
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 
 # Copy the rest of the source and build
 COPY . .
