@@ -24,9 +24,11 @@ const Index = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const {
-    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId, searchQuery, showArchived,
-    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived,
-    createNote, updateNote, deleteNote, archiveNote, createNotebook, updateNotebook, deleteNotebook,
+    notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    searchQuery, showArchived, showTrash, trashedCount,
+    setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
+    createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
+    createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
   } = useNotes();
 
@@ -93,10 +95,11 @@ const Index = () => {
     <NoteSidebar
       notebooks={notebooks} labels={labels}
       activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
-      showArchived={showArchived}
-      onSelectNotebook={(id) => { setActiveNotebookId(id); if (!isDesktop) setDrawerOpen(false); }}
-      onSelectLabel={(id) => { setActiveLabelId(id); if (!isDesktop) setDrawerOpen(false); }}
-      onToggleArchived={() => { setShowArchived(!showArchived); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
+      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount}
+      onSelectNotebook={(id) => { setActiveNotebookId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
+      onSelectLabel={(id) => { setActiveLabelId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
+      onToggleArchived={() => { setShowArchived(!showArchived); setShowTrash(false); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
+      onToggleTrash={() => { setShowTrash(!showTrash); setShowArchived(false); setActiveNotebookId(null); setActiveLabelId(null); setActiveNoteId(null); if (!isDesktop) setDrawerOpen(false); }}
       onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
       onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
       noteCountByNotebook={noteCountByNotebook}
