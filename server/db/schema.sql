@@ -70,10 +70,14 @@ CREATE TABLE IF NOT EXISTS notes (
   archived    BOOLEAN NOT NULL DEFAULT false,
   password    TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at  TIMESTAMPTZ
 );
+-- Backfill column for existing databases
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS notes_user_id_idx ON notes(user_id);
 CREATE INDEX IF NOT EXISTS notes_notebook_id_idx ON notes(notebook_id);
+CREATE INDEX IF NOT EXISTS notes_deleted_at_idx ON notes(deleted_at);
 
 -- ---------- Note ↔ Label (many-to-many) ----------
 CREATE TABLE IF NOT EXISTS note_labels (

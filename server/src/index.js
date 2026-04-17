@@ -45,6 +45,8 @@ async function start() {
   // Lightweight runtime migrations (idempotent) for existing databases
   try {
     await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()");
+    await pool.query("ALTER TABLE notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ");
+    await pool.query("CREATE INDEX IF NOT EXISTS notes_deleted_at_idx ON notes(deleted_at)");
   } catch (e) {
     console.warn('migration warning:', e.message);
   }
