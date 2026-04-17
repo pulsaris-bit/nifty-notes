@@ -343,7 +343,10 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
             {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
             <span className="hidden lg:inline">·</span>
           </div>
-          <span className="truncate pl-7 lg:pl-0">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+          <span className="pl-7 lg:pl-0 whitespace-nowrap">
+            <span className="lg:hidden">Bewerkt {format(note.updatedAt, "d MMM yyyy, HH:mm", { locale: nl })}</span>
+            <span className="hidden lg:inline">Bewerkt {format(note.updatedAt, "d MMM yyyy 'om' HH:mm", { locale: nl })}</span>
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {/* Mode toggle */}
