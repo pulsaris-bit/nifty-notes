@@ -3,7 +3,8 @@ import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
-import { useNotes } from '@/hooks/useNotes';
+import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
+import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { PanelLeftOpen, ArrowLeft } from 'lucide-react';
@@ -18,20 +19,22 @@ const Index = () => {
   // Desktop: persistent sidebar visibility. Tablet/Mobile: overlay drawer.
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Mobile only: which pane is showing (list or editor)
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
-  // Notebook picker dialog (when creating a note without a notebook context)
   const [pickerOpen, setPickerOpen] = useState(false);
-  // Tracks the most recently created note so the editor opens it in edit mode.
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
+  // Picker for placing a shared note into one of MY notebooks
+  const [sharedPickerNoteId, setSharedPickerNoteId] = useState<string | null>(null);
+  const { user } = useMockAuth();
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
-    searchQuery, showArchived, showTrash, trashedCount,
+    searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
+    presence, remoteUpdate, dismissRemoteUpdate,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
 
   const noteCountByNotebook = useMemo(() => {
@@ -99,7 +102,7 @@ const Index = () => {
     <NoteSidebar
       notebooks={notebooks} labels={labels}
       activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
-      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount}
+      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount} sharedInboxCount={sharedInboxCount}
       onSelectNotebook={(id) => { setActiveNotebookId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
       onSelectLabel={(id) => { setActiveLabelId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
       onToggleArchived={() => { setShowArchived(!showArchived); setShowTrash(false); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
@@ -172,6 +175,8 @@ const Index = () => {
               showSidebarToggle={showSidebarToggleInList}
               onOpenSidebar={() => setDesktopSidebarVisible(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -182,6 +187,12 @@ const Index = () => {
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -196,6 +207,8 @@ const Index = () => {
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -205,6 +218,12 @@ const Index = () => {
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           </div>
         </div>
@@ -219,6 +238,8 @@ const Index = () => {
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           ) : (
             <NoteEditor
@@ -228,6 +249,12 @@ const Index = () => {
               onBack={() => setMobileView('list')}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           )}
         </div>
@@ -238,6 +265,14 @@ const Index = () => {
         onOpenChange={setPickerOpen}
         notebooks={notebooks}
         onPick={handlePickNotebookForNewNote}
+        onCreate={createNotebook}
+      />
+      {/* Picker for placing a shared note into one of MY notebooks */}
+      <SelectNotebookDialog
+        open={!!sharedPickerNoteId}
+        onOpenChange={(o) => { if (!o) setSharedPickerNoteId(null); }}
+        notebooks={notebooks}
+        onPick={(nbId) => { if (sharedPickerNoteId) setSharedNoteNotebook(sharedPickerNoteId, nbId); setSharedPickerNoteId(null); }}
         onCreate={createNotebook}
       />
     </div>

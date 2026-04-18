@@ -4,6 +4,7 @@ export const API_URL = RAW && RAW.length > 0 ? RAW.replace(/\/$/, '') : null;
 export const HAS_API = API_URL !== null;
 
 const TOKEN_KEY = 'api_auth_token';
+const DEVICE_ID_KEY = 'api_device_id';
 
 export function getToken(): string | null {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
@@ -13,6 +14,24 @@ export function setToken(token: string | null) {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch { /* ignore */ }
+}
+
+/**
+ * Stable device id per browser (per localStorage). Used to:
+ *  - identify the source of a mutation so the same client can ignore its own SSE echo
+ *  - track presence per device
+ */
+export function getDeviceId(): string {
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return `d-${Math.random().toString(36).slice(2, 10)}`;
+  }
 }
 
 export class ApiError extends Error {
@@ -25,7 +44,10 @@ export async function api<T = unknown>(
   opts: { method?: string; body?: unknown; auth?: boolean } = {},
 ): Promise<T> {
   if (!API_URL) throw new ApiError('No API configured', 0);
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Device-Id': getDeviceId(),
+  };
   if (opts.auth !== false) {
     const t = getToken();
     if (t) headers.Authorization = `Bearer ${t}`;
@@ -42,4 +64,12 @@ export async function api<T = unknown>(
   }
   if (!res.ok) throw new ApiError(data?.error || `HTTP ${res.status}`, res.status);
   return data as T;
+}
+
+/** Build the SSE stream URL with token+deviceId in the query (EventSource cannot set headers). */
+export function eventStreamUrl(): string | null {
+  const token = getToken();
+  if (!API_URL || !token) return null;
+  const params = new URLSearchParams({ token, deviceId: getDeviceId() });
+  return `${API_URL}/events/stream?${params.toString()}`;
 }

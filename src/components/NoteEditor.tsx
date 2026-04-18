@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye } from 'lucide-react';
-import { Note, Notebook, Label } from '@/types/notes';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput } from 'lucide-react';
+import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { QuillEditor } from '@/components/QuillEditor';
+import { ShareDialog } from '@/components/ShareDialog';
+import { PresenceAvatars } from '@/components/PresenceAvatars';
 import {
   isEncrypted, isHashedPassword,
   encryptPayload, decryptPayload,
@@ -21,31 +23,50 @@ interface NoteEditorProps {
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
   onBack?: () => void;
-  /** When true, the editor shows a read-only "in prullenbak" view with restore + permanent delete. */
   trashMode?: boolean;
   onRestore?: (id: string) => void;
   onPurge?: (id: string) => void;
-  /** When true, the note was just created and should open in edit mode. */
   isNewNote?: boolean;
+  // Sharing & realtime
+  currentUserId?: string;
+  viewers?: PresenceViewer[];
+  remoteUpdate?: { noteId: string; by: string | null } | null;
+  onDismissRemoteUpdate?: (refresh: boolean) => void;
+  searchUsers?: (q: string) => Promise<UserSearchResult[]>;
+  listShares?: (noteId: string) => Promise<NoteShare[]>;
+  shareNote?: (noteId: string, email: string, perm: 'read' | 'write') => Promise<{ error?: string }>;
+  updateShare?: (noteId: string, recipientId: string, perm: 'read' | 'write') => Promise<void>;
+  removeShare?: (noteId: string, recipientId: string) => Promise<void>;
+  onPickSharedNotebook?: (noteId: string) => void;
 }
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge, isNewNote = false }: NoteEditorProps) {
+export function NoteEditor({
+  note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel,
+  onBack, trashMode = false, onRestore, onPurge, isNewNote = false,
+  currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
+  searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
+}: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [lockPassword, setLockPassword] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-  // 'edit' = quill toolbar visible & editable; 'view' = read-only without toolbar.
   const [mode, setMode] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
-  // noteId -> derived plain content (only kept in memory for this session)
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
+
+  // Permissions derived from the note
+  const isShared = !!note?.sharedBy;
+  const isReadOnly = trashMode || (isShared && note?.permission === 'read');
+  const isOwner = !isShared;
 
   useEffect(() => {
     setShowLabelPicker(false);
     setShowLockDialog(false);
+    setShowShareDialog(false);
     setLockPassword('');
     setLockConfirm('');
     setLockError('');
@@ -246,6 +267,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               </button>
             )}
             {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
+            {isShared && note.sharedBy && (
+              <span className="flex items-center gap-1 truncate text-primary font-medium" title={`Gedeeld door ${note.sharedBy.displayName}`}>
+                <Share2 size={11} /> {note.sharedBy.displayName}
+                <span className="text-muted-foreground font-normal">· {note.permission === 'write' ? 'kan bewerken' : 'alleen lezen'}</span>
+              </span>
+            )}
             <span className="hidden lg:inline">·</span>
           </div>
           <span className="pl-7 lg:pl-0 whitespace-nowrap">
@@ -254,6 +281,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Presence avatars */}
+          <PresenceAvatars viewers={viewers} currentUserId={currentUserId} />
           {!trashMode && !showLockedView && (
             <button
               onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
@@ -264,6 +293,28 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
             </button>
           )}
+          {/* Share — owner only, hidden when locked (per requirements) */}
+          {isOwner && !trashMode && !isLocked && shareNote && (
+            <button
+              onClick={() => setShowShareDialog(true)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Delen"
+            >
+              <Share2 size={16} />
+            </button>
+          )}
+          {/* Pick recipient notebook — only for shared notes that are still in the inbox */}
+          {isShared && note.notebookId === '__shared__' && onPickSharedNotebook && (
+            <button
+              onClick={() => onPickSharedNotebook(note.id)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="In een notebook plaatsen"
+            >
+              <FolderInput size={16} />
+            </button>
+          )}
+          {/* Labels — owner only */}
+          {isOwner && (
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
@@ -300,7 +351,9 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               </div>
             )}
           </div>
-          {/* Lock button */}
+          )}
+          {/* Lock button — owner only */}
+          {isOwner && (
           <div className="relative">
             <button onClick={() => {
               if (isLocked && isUnlocked && note) {
@@ -345,29 +398,42 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               </>
             )}
           </div>
-          {isLocked && isUnlocked && (
+          )}
+          {isOwner && isLocked && isUnlocked && (
             <button onClick={handleRemovePassword}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               title="Wachtwoord verwijderen">
               <LockOpen size={16} />
             </button>
           )}
+          {/* Pin — owner only */}
+          {isOwner && (
           <button onClick={() => onUpdate(note.id, { pinned: !note.pinned })}
             className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
             {note.pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          {!trashMode && (
+          )}
+          {/* Archive — owner only */}
+          {isOwner && !trashMode && (
             <button onClick={() => onArchive(note.id)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
               {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
             </button>
           )}
-          {!trashMode && (
+          {/* Trash (owner) / Leave (recipient) */}
+          {!trashMode && isOwner && (
             <button onClick={() => onDelete(note.id)}
               className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Naar prullenbak">
               <Trash2 size={16} />
+            </button>
+          )}
+          {!trashMode && !isOwner && (
+            <button
+              onClick={() => { if (confirm('Wil je deze gedeelde notitie verlaten? Hij verdwijnt uit jouw lijst maar blijft bestaan voor de eigenaar.')) onDelete(note.id); }}
+              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Gedeelde notitie verlaten">
+              <LogOut size={16} />
             </button>
           )}
         </div>
@@ -426,18 +492,42 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               rows={1}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."
-              readOnly={trashMode || mode === 'view'}
+              readOnly={isReadOnly || mode === 'view'}
             />
           </div>
+          {/* Remote-update banner (active note edited elsewhere) */}
+          {remoteUpdate && remoteUpdate.noteId === note.id && (
+            <div className="mx-3 sm:mx-6 mb-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-xs flex items-center justify-between gap-2 flex-wrap">
+              <span className="flex items-center gap-1.5"><RefreshCw size={12} /> Deze notitie is elders bijgewerkt{remoteUpdate.by ? ` door ${remoteUpdate.by}` : ''}.</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => onDismissRemoteUpdate?.(false)} className="text-xs px-2 py-0.5 rounded hover:bg-background">Negeren</button>
+                <button onClick={() => onDismissRemoteUpdate?.(true)} className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground hover:opacity-90">Vernieuwen</button>
+              </div>
+            </div>
+          )}
           {/* Quill editor */}
           <QuillEditor
             value={displayContent}
             onChange={handleContentChange}
-            readOnly={trashMode || mode === 'view'}
-            hideToolbar={mode === 'view'}
+            readOnly={isReadOnly || mode === 'view'}
+            hideToolbar={mode === 'view' || isReadOnly}
             placeholder="Begin met schrijven..."
           />
         </>
+      )}
+      {/* Share dialog */}
+      {note && shareNote && listShares && updateShare && removeShare && searchUsers && (
+        <ShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          noteId={note.id}
+          noteTitle={note.title}
+          searchUsers={searchUsers}
+          listShares={listShares}
+          shareNote={shareNote}
+          updateShare={updateShare}
+          removeShare={removeShare}
+        />
       )}
     </motion.div>
   );

@@ -86,3 +86,22 @@ CREATE TABLE IF NOT EXISTS note_labels (
   PRIMARY KEY (note_id, label_id)
 );
 CREATE INDEX IF NOT EXISTS note_labels_label_id_idx ON note_labels(label_id);
+
+-- ---------- Note shares ----------
+DO $$ BEGIN
+  CREATE TYPE share_permission AS ENUM ('read', 'write');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+CREATE TABLE IF NOT EXISTS note_shares (
+  note_id            TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  owner_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission         share_permission NOT NULL DEFAULT 'read',
+  -- Optional: notebook (of the recipient) where this shared note appears.
+  -- NULL means the recipient hasn't picked a notebook yet → shows in "Gedeeld met mij".
+  target_notebook_id TEXT REFERENCES notebooks(id) ON DELETE SET NULL,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (note_id, recipient_id)
+);
+CREATE INDEX IF NOT EXISTS note_shares_recipient_idx ON note_shares(recipient_id);
+CREATE INDEX IF NOT EXISTS note_shares_owner_idx ON note_shares(owner_id);
