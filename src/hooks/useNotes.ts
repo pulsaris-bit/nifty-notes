@@ -153,8 +153,10 @@ export function useNotes() {
           setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
         }
         setNotes([...ns.map(mapApiNote), ...trashed.map(mapApiNote)]);
+        setDataLoaded(true);
       } catch (e) {
         console.error('Failed to load data from API', e);
+        setDataLoaded(true);
       }
     })();
     return () => { cancelled = true; };
