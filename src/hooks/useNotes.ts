@@ -608,7 +608,7 @@ export function useNotes() {
 
   return {
     notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
-    searchQuery, showArchived, showTrash,
+    searchQuery, showArchived, showTrash, dataLoaded,
     trashedCount: trashedNotes.length,
     sharedInboxCount,
     noteCountByNotebook,
