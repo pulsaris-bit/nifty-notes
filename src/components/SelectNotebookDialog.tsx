@@ -56,7 +56,7 @@ export function SelectNotebookDialog({ open, onOpenChange, notebooks, onPick, on
         {mode === 'pick' ? (
           <div className="space-y-3">
             <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
-              {notebooks.map((nb) => (
+              {[...notebooks].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })).map((nb) => (
                 <button
                   key={nb.id}
                   onClick={() => handlePick(nb.id)}
