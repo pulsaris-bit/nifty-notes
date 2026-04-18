@@ -4,6 +4,11 @@
 // userId -> Set<{ res, deviceId }>
 const subscribers = new Map();
 
+// Optional callback used to look up which users should receive a presence
+// broadcast when an SSE connection drops. Wired up in routes/events.js.
+let presenceRecipientsResolver = null;
+export function setPresenceRecipientsResolver(fn) { presenceRecipientsResolver = fn; }
+
 // noteId -> Map<userId, { displayName, devices: Map<deviceId, { lastSeen, mode }> }>
 const presence = new Map();
 
@@ -19,15 +24,29 @@ export function subscribe(userId, deviceId, res) {
     try { res.write(': ping\n\n'); } catch { /* ignore */ }
   }, HEARTBEAT_MS);
 
+  let cleanedUp = false;
   const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
     clearInterval(heartbeat);
     const set = subscribers.get(userId);
     if (set) {
       set.delete(entry);
       if (set.size === 0) subscribers.delete(userId);
     }
-    // Drop presence registered by this device
-    removeDevicePresence(userId, deviceId);
+    // Drop presence registered by this device, then broadcast the change so
+    // remaining viewers immediately see the user leave / stop editing.
+    const affected = removeDevicePresence(userId, deviceId);
+    if (affected.length && presenceRecipientsResolver) {
+      Promise.resolve().then(async () => {
+        for (const noteId of affected) {
+          try {
+            const recipients = await presenceRecipientsResolver(noteId);
+            publish(recipients, { type: 'presence.changed', noteId, viewers: listViewers(noteId) });
+          } catch { /* ignore */ }
+        }
+      });
+    }
   };
   res.on('close', cleanup);
   res.on('error', cleanup);
