@@ -42,6 +42,7 @@ export interface UserSearchResult {
 export interface PresenceViewer {
   userId: string;
   displayName: string;
+  isEditing: boolean;
 }
 
 export const TRASH_RETENTION_DAYS = 30;

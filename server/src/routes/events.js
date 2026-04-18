@@ -32,6 +32,7 @@ router.get('/stream', async (req, res) => {
 const presenceSchema = z.object({
   noteId: z.string().min(1).max(64).nullable(),
   deviceId: z.string().min(1).max(64),
+  mode: z.enum(['view', 'edit']).default('view'),
 });
 
 async function broadcastPresence(noteId) {
@@ -42,7 +43,7 @@ async function broadcastPresence(noteId) {
 router.post('/presence', requireAuth, async (req, res) => {
   const parsed = presenceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-  const { noteId, deviceId } = parsed.data;
+  const { noteId, deviceId, mode } = parsed.data;
 
   // Look up display name for the viewer.
   const { rows } = await pool.query(
@@ -56,7 +57,7 @@ router.post('/presence', requireAuth, async (req, res) => {
   // First clear this device on all other notes (only one active note at a time).
   const cleared = removeDevicePresence(req.userId, deviceId);
 
-  if (noteId) setPresence(noteId, req.userId, deviceId, displayName);
+  if (noteId) setPresence(noteId, req.userId, deviceId, displayName, mode);
 
   // Broadcast to all affected notes (the previous ones + the new one).
   const affected = new Set(cleared);
@@ -71,14 +72,14 @@ router.post('/presence', requireAuth, async (req, res) => {
 router.post('/presence/ping', requireAuth, async (req, res) => {
   const parsed = presenceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-  const { noteId, deviceId } = parsed.data;
+  const { noteId, deviceId, mode } = parsed.data;
   if (noteId) {
     const { rows } = await pool.query(
       `SELECT COALESCE(p.display_name, u.email) AS display_name
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = $1 LIMIT 1`,
       [req.userId],
     );
-    setPresence(noteId, req.userId, deviceId, rows[0]?.display_name || 'Onbekend');
+    setPresence(noteId, req.userId, deviceId, rows[0]?.display_name || 'Onbekend', mode);
   }
   res.json({ ok: true });
 });
