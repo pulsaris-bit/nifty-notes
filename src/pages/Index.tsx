@@ -102,7 +102,7 @@ const Index = () => {
     <NoteSidebar
       notebooks={notebooks} labels={labels}
       activeNotebookId={activeNotebookId} activeLabelId={activeLabelId}
-      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount}
+      showArchived={showArchived} showTrash={showTrash} trashedCount={trashedCount} sharedInboxCount={sharedInboxCount}
       onSelectNotebook={(id) => { setActiveNotebookId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
       onSelectLabel={(id) => { setActiveLabelId(id); setShowTrash(false); if (!isDesktop) setDrawerOpen(false); }}
       onToggleArchived={() => { setShowArchived(!showArchived); setShowTrash(false); setActiveNotebookId(null); setActiveLabelId(null); if (!isDesktop) setDrawerOpen(false); }}
