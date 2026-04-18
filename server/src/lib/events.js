@@ -4,7 +4,7 @@
 // userId -> Set<{ res, deviceId }>
 const subscribers = new Map();
 
-// noteId -> Map<userId, { displayName, devices: Map<deviceId, lastSeen> }>
+// noteId -> Map<userId, { displayName, devices: Map<deviceId, { lastSeen, mode }> }>
 const presence = new Map();
 
 const HEARTBEAT_MS = 25_000;
@@ -47,12 +47,12 @@ export function publish(userIds, event) {
 
 // ---------- Presence ----------
 
-export function setPresence(noteId, userId, deviceId, displayName) {
+export function setPresence(noteId, userId, deviceId, displayName, mode = 'view') {
   if (!noteId) return;
   if (!presence.has(noteId)) presence.set(noteId, new Map());
   const noteMap = presence.get(noteId);
   if (!noteMap.has(userId)) noteMap.set(userId, { displayName, devices: new Map() });
-  noteMap.get(userId).devices.set(deviceId, Date.now());
+  noteMap.get(userId).devices.set(deviceId, { lastSeen: Date.now(), mode });
   noteMap.get(userId).displayName = displayName;
 }
 
@@ -89,15 +89,17 @@ export function listViewers(noteId) {
   const now = Date.now();
   const viewers = [];
   for (const [userId, data] of noteMap) {
+    let isEditing = false;
     // Filter stale devices
-    for (const [dev, last] of data.devices) {
-      if (now - last > PRESENCE_TIMEOUT_MS) data.devices.delete(dev);
+    for (const [dev, meta] of data.devices) {
+      if (now - meta.lastSeen > PRESENCE_TIMEOUT_MS) data.devices.delete(dev);
+      else if (meta.mode === 'edit') isEditing = true;
     }
     if (data.devices.size === 0) {
       noteMap.delete(userId);
       continue;
     }
-    viewers.push({ userId, displayName: data.displayName });
+    viewers.push({ userId, displayName: data.displayName, isEditing });
   }
   if (noteMap.size === 0) presence.delete(noteId);
   return viewers;

@@ -42,6 +42,7 @@ interface NoteEditorProps {
   // Sync helpers
   onFlush?: (noteId: string) => void;
   onRefetch?: (noteId: string) => void;
+  onModeChange?: (mode: 'view' | 'edit') => void;
 }
 
 export function NoteEditor({
@@ -49,7 +50,7 @@ export function NoteEditor({
   onBack, trashMode = false, onRestore, onPurge, isNewNote = false,
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
-  onFlush, onRefetch,
+  onFlush, onRefetch, onModeChange,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -67,7 +68,8 @@ export function NoteEditor({
   const isShared = !!note?.sharedBy;
   // Other users currently viewing this note (excluding ourselves).
   const otherViewers = viewers.filter((v) => v.userId && v.userId !== currentUserId);
-  const lockedByOthers = otherViewers.length > 0;
+  const editingViewers = otherViewers.filter((v) => v.isEditing);
+  const lockedByOthers = editingViewers.length > 0;
   const isReadOnly = trashMode || (isShared && note?.permission === 'read') || lockedByOthers;
   const isOwner = !isShared;
 
@@ -121,6 +123,14 @@ export function NoteEditor({
   const isUnlocked = !!unlockedEntry;
   // Locked view appears whenever the content is encrypted and not yet unlocked this session.
   const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
+
+  useEffect(() => {
+    if (!note) {
+      onModeChange?.('view');
+      return;
+    }
+    onModeChange?.(mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view');
+  }, [isReadOnly, mode, note, onModeChange, showLockedView]);
 
   // Display value: when content is encrypted+unlocked, show plaintext from session map.
   const displayContent = unlockedEntry ? unlockedEntry.content : note?.content ?? '';
@@ -325,7 +335,7 @@ export function NoteEditor({
               onClick={() => { if (!lockedByOthers) setMode((m) => (m === 'edit' ? 'view' : 'edit')); }}
               disabled={lockedByOthers}
               className={`p-1.5 rounded-md transition-colors ${lockedByOthers ? 'opacity-40 cursor-not-allowed text-muted-foreground' : mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              title={lockedByOthers ? `Wordt bekeken door ${otherViewers[0]?.displayName ?? 'een andere gebruiker'} — bewerken geblokkeerd` : mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+              title={lockedByOthers ? `Wordt bewerkt door ${editingViewers[0]?.displayName ?? 'een andere gebruiker'} — bewerken geblokkeerd` : mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
               aria-label={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
             >
               {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
