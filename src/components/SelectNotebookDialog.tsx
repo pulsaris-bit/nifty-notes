@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Notebook } from '@/types/notes';
 import { Plus } from 'lucide-react';
@@ -17,6 +17,14 @@ export function SelectNotebookDialog({ open, onOpenChange, notebooks, onPick, on
   const [mode, setMode] = useState<'pick' | 'create'>(notebooks.length > 0 ? 'pick' : 'create');
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('📓');
+
+  // Re-evaluate mode each time the dialog opens or the notebooks list changes,
+  // so freshly-loaded notebooks are shown instead of the stale initial state.
+  useEffect(() => {
+    if (open) {
+      setMode(notebooks.length > 0 ? 'pick' : 'create');
+    }
+  }, [open, notebooks.length]);
 
   const reset = () => { setName(''); setEmoji('📓'); setMode(notebooks.length > 0 ? 'pick' : 'create'); };
 
