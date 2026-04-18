@@ -242,6 +242,16 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {!trashMode && !showLockedView && (
+            <button
+              onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
+              className={`p-1.5 rounded-md transition-colors ${mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              title={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+              aria-label={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+            >
+              {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
+            </button>
+          )}
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
