@@ -28,6 +28,10 @@ export default {
         'note-list': {
           bg: 'hsl(var(--note-list-bg))',
         },
+        presence: {
+          DEFAULT: 'hsl(var(--presence))',
+          foreground: 'hsl(var(--presence-foreground))',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

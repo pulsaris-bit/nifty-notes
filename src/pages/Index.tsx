@@ -175,6 +175,8 @@ const Index = () => {
               showSidebarToggle={showSidebarToggleInList}
               onOpenSidebar={() => setDesktopSidebarVisible(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -205,6 +207,8 @@ const Index = () => {
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -234,6 +238,8 @@ const Index = () => {
               showSidebarToggle
               onOpenSidebar={() => setDrawerOpen(true)}
               trashMode={showTrash}
+              presence={presence}
+              currentUserId={user?.id}
             />
           ) : (
             <NoteEditor
