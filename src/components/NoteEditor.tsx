@@ -97,14 +97,6 @@ export function NoteEditor({
     }
   }, [lockedByOthers, mode, note, onFlush]);
 
-  useEffect(() => {
-    if (!note) {
-      onModeChange?.('view');
-      return;
-    }
-    onModeChange?.(mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view');
-  }, [isReadOnly, mode, note, onModeChange, showLockedView]);
-
   // When switching from edit → view, flush pending PATCH and refetch so the
   // read view immediately reflects the saved state.
   const prevModeRef = useRef(mode);
@@ -131,6 +123,14 @@ export function NoteEditor({
   const isUnlocked = !!unlockedEntry;
   // Locked view appears whenever the content is encrypted and not yet unlocked this session.
   const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
+
+  useEffect(() => {
+    if (!note) {
+      onModeChange?.('view');
+      return;
+    }
+    onModeChange?.(mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view');
+  }, [isReadOnly, mode, note, onModeChange, showLockedView]);
 
   // Display value: when content is encrypted+unlocked, show plaintext from session map.
   const displayContent = unlockedEntry ? unlockedEntry.content : note?.content ?? '';
