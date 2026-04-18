@@ -66,6 +66,7 @@ export function NoteEditor({
   useEffect(() => {
     setShowLabelPicker(false);
     setShowLockDialog(false);
+    setShowShareDialog(false);
     setLockPassword('');
     setLockConfirm('');
     setLockError('');
