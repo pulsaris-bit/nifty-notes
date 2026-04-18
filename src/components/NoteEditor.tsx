@@ -49,6 +49,7 @@ export function NoteEditor({
   onBack, trashMode = false, onRestore, onPurge, isNewNote = false,
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
+  onFlush, onRefetch,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -64,7 +65,10 @@ export function NoteEditor({
 
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;
-  const isReadOnly = trashMode || (isShared && note?.permission === 'read');
+  // Other users currently viewing this note (excluding ourselves).
+  const otherViewers = viewers.filter((v) => v.userId && v.userId !== currentUserId);
+  const lockedByOthers = otherViewers.length > 0;
+  const isReadOnly = trashMode || (isShared && note?.permission === 'read') || lockedByOthers;
   const isOwner = !isShared;
 
   useEffect(() => {
