@@ -594,6 +594,8 @@ export function useNotes() {
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    // realtime helpers
+    flushPendingPatch, refetchNote,
     // sharing
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   };
