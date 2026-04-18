@@ -36,6 +36,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRES: ${JWT_EXPIRES:-7d}
       PORT: 4000
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - notes-uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:4000/api/health"]
       interval: 30s
@@ -65,3 +68,4 @@ services:
 
 volumes:
   notes-db-data:
+  notes-uploads:
