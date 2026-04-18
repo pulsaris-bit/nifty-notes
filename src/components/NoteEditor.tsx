@@ -322,7 +322,6 @@ export function NoteEditor({
             )}
             {notebook && isOwner && !trashMode ? (
               <div className="relative flex items-center gap-1 truncate">
-                <span aria-hidden>{notebook.icon}</span>
                 <select
                   value={note.notebookId}
                   onChange={(e) => {
@@ -331,7 +330,7 @@ export function NoteEditor({
                   }}
                   title="Verplaats naar ander notitieboek"
                   aria-label="Notitieboek wijzigen"
-                  className="bg-transparent text-foreground/80 font-medium text-xs outline-none cursor-pointer hover:text-foreground focus:ring-1 focus:ring-ring rounded px-1 py-0.5 max-w-[12rem] truncate"
+                  className="bg-transparent text-foreground/80 font-medium text-xs outline-none cursor-pointer hover:text-foreground focus:ring-1 focus:ring-ring rounded px-1 py-0.5 max-w-[14rem] truncate"
                 >
                   {[...notebooks]
                     .sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }))
