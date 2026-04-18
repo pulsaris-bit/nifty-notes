@@ -40,6 +40,25 @@ router.get('/', async (req, res) => {
   res.json([...owned, ...shared]);
 });
 
+// Single note (owned or shared) — used by the realtime client to refetch only
+// what changed instead of fetching the whole list on every push.
+router.get('/:id', async (req, res) => {
+  const [owned, shared] = await Promise.all([
+    fetchOwnedNotes(req.userId, 'deleted_at IS NULL'),
+    fetchSharedWithMe(req.userId),
+  ]);
+  const all = [...owned, ...shared];
+  const found = all.find((n) => n.id === req.params.id);
+  if (!found) {
+    // Maybe trashed (owner)
+    const trashed = await fetchOwnedNotes(req.userId, 'deleted_at IS NOT NULL');
+    const t = trashed.find((n) => n.id === req.params.id);
+    if (!t) return res.status(404).json({ error: 'Note not found' });
+    return res.json(t);
+  }
+  res.json(found);
+});
+
 // Trashed notes (owner only — recipients can't trash, only leave)
 router.get('/trash', async (req, res) => {
   await purgeOldTrash(req.userId);
