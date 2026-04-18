@@ -222,6 +222,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           </div>
         </div>
@@ -253,6 +254,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           )}
         </div>
