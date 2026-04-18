@@ -267,6 +267,12 @@ export function NoteEditor({
               </button>
             )}
             {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
+            {isShared && note.sharedBy && (
+              <span className="flex items-center gap-1 truncate text-primary font-medium" title={`Gedeeld door ${note.sharedBy.displayName}`}>
+                <Share2 size={11} /> {note.sharedBy.displayName}
+                <span className="text-muted-foreground font-normal">· {note.permission === 'write' ? 'kan bewerken' : 'alleen lezen'}</span>
+              </span>
+            )}
             <span className="hidden lg:inline">·</span>
           </div>
           <span className="pl-7 lg:pl-0 whitespace-nowrap">
@@ -275,6 +281,8 @@ export function NoteEditor({
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Presence avatars */}
+          <PresenceAvatars viewers={viewers} currentUserId={currentUserId} />
           {!trashMode && !showLockedView && (
             <button
               onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
