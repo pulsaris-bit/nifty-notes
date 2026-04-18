@@ -28,6 +28,7 @@ const updateSchema = z.object({
   archived: z.boolean().optional(),
   password: z.string().max(200).nullable().optional(),
   labelIds: z.array(z.string().max(64)).optional(),
+  notebookId: z.string().min(1).max(64).optional(),
 });
 
 // Active notes (owned + shared with me, excludes trash)
