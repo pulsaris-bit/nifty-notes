@@ -104,9 +104,6 @@ const Profile = () => {
           <ChangePasswordCard />
         </div>
 
-        <p className="text-[11px] text-muted-foreground text-center mt-6 leading-relaxed">
-          Demo-modus: profielgegevens worden lokaal in je browser bewaard.
-        </p>
       </div>
     </div>
   );
