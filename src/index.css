@@ -150,7 +150,7 @@
 .quill-host .ql-editor p:last-child {
   margin-bottom: 0;
 }
-.quill-host .ql-editor blockquote {
+.quill-host .ql-editor a { color: hsl(var(--primary)); }
   border-left: 3px solid hsl(var(--primary) / 0.5);
   color: hsl(var(--muted-foreground));
   padding-left: 12px;
