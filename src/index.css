@@ -197,6 +197,14 @@
   border: 1px solid hsl(var(--border));
   color: hsl(var(--popover-foreground));
   border-radius: 6px;
+  z-index: 30;
+}
+.quill-host .ql-snow .ql-picker.ql-expanded .ql-picker-options {
+  z-index: 30;
+}
+/* Ensure the toolbar itself establishes a stacking context above editor content */
+.quill-host .ql-toolbar.ql-snow {
+  z-index: 20;
 }
 .quill-host .ql-snow .ql-tooltip {
   background: hsl(var(--popover));
