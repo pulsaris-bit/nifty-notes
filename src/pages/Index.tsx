@@ -28,7 +28,7 @@ const Index = () => {
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
-    searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
+    searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount, dataLoaded,
     noteCountByNotebook, noteCountByLabel,
     presence, remoteUpdate, dismissRemoteUpdate,
     setActivePresenceMode,
@@ -39,6 +39,9 @@ const Index = () => {
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
+
+  // Force the user to create their first notebook before they can do anything else.
+  const mustCreateFirstNotebook = !!user && dataLoaded && notebooks.length === 0;
 
   // When on mobile and a note becomes active via selection, switch to editor pane.
   const handleSelectNote = (id: string) => {
