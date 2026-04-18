@@ -528,6 +528,8 @@ export function useNotes() {
     searchQuery, showArchived, showTrash,
     trashedCount: trashedNotes.length,
     sharedInboxCount,
+    noteCountByNotebook,
+    noteCountByLabel,
     presence,
     remoteUpdate,
     dismissRemoteUpdate,
