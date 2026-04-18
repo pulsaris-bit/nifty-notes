@@ -283,6 +283,19 @@ export function useNotes() {
   // Count of notes that are shared with me but have no chosen notebook yet.
   const sharedInboxCount = activeNotes.filter((n) => n.permission !== 'owner' && n.notebookId === SHARED_INBOX_ID).length;
 
+  // Robust counters computed from the FULL (unfiltered) active notes list,
+  // so they don't drop to 0 when the user selects a notebook/label or searches.
+  // Excludes archived and trashed notes — only "live" notes count.
+  const countableNotes = activeNotes.filter((n) => !n.archived);
+  const noteCountByNotebook: Record<string, number> = {};
+  const noteCountByLabel: Record<string, number> = {};
+  for (const n of countableNotes) {
+    noteCountByNotebook[n.notebookId] = (noteCountByNotebook[n.notebookId] || 0) + 1;
+    for (const lid of n.labelIds) {
+      noteCountByLabel[lid] = (noteCountByLabel[lid] || 0) + 1;
+    }
+  }
+
   const createNote = useCallback((notebookId?: string) => {
     const targetNotebookId = notebookId || activeNotebookId;
     if (!targetNotebookId || targetNotebookId === SHARED_INBOX_ID) {
