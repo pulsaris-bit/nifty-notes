@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react';
-import ReactQuill from 'react-quill-new';
+import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import QuillTableBetter from 'quill-table-better';
+import 'quill-table-better/dist/quill-table-better.css';
+
+// Register the table module exactly once (HMR-safe).
+let tableRegistered = false;
+function ensureTableRegistered() {
+  if (tableRegistered) return;
+  Quill.register({ 'modules/table-better': QuillTableBetter }, true);
+  tableRegistered = true;
+}
 
 interface QuillEditorProps {
   value: string;
@@ -14,13 +24,17 @@ interface QuillEditorProps {
  *
  * Stores its value as an HTML string. The "extended" toolbar mirrors the
  * Synology-style note editor: headings, inline formatting, color/background,
- * lists (incl. checkboxes), alignment, indent, links/images/video, code, etc.
+ * lists (incl. checkboxes), alignment, indent, links/images/video, code, and
+ * tables (via quill-table-better).
  */
 export function QuillEditor({ value, onChange, readOnly = false, placeholder }: QuillEditorProps) {
+  ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
 
   const modules = useMemo(
     () => ({
+      // The native table module must be disabled when using table-better.
+      table: false,
       toolbar: [
         [{ header: [1, 2, 3, 4, 5, false] }, { font: [] }],
         [{ size: ['small', false, 'large', 'huge'] }],
@@ -31,8 +45,17 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder }: 
         ['blockquote', 'code-block'],
         ['link', 'image', 'video'],
         [{ script: 'sub' }, { script: 'super' }],
+        ['table-better'],
         ['clean'],
       ],
+      'table-better': {
+        language: 'en_US',
+        menus: ['column', 'row', 'merge', 'table', 'cell', 'wrap', 'copy', 'delete'],
+        toolbarTable: true,
+      },
+      keyboard: {
+        bindings: QuillTableBetter.keyboardBindings,
+      },
       clipboard: { matchVisual: false },
     }),
     [],
@@ -48,12 +71,12 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder }: 
       'blockquote', 'code-block',
       'link', 'image', 'video',
       'script',
+      // table-better formats
+      'table-better', 'table-cell-block', 'table-list', 'table-header',
     ],
     [],
   );
 
-  // Re-sync on note swap so the editor doesn't keep the previous note's content
-  // selected when readOnly toggles.
   useEffect(() => {
     const editor = ref.current?.getEditor();
     if (!editor) return;
