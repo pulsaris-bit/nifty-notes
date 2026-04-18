@@ -172,16 +172,19 @@ export function useNotes() {
 
     const refetchNote = async (noteId: string) => {
       try {
-        const fresh = await api<any[]>('/notes');
-        const found = fresh.find((n) => n.id === noteId);
+        const found = await api<any>(`/notes/${noteId}`);
         setNotes((prev) => {
-          if (!found) return prev.filter((n) => n.id !== noteId);
           const mapped = mapApiNote(found);
           const exists = prev.some((n) => n.id === noteId);
           if (exists) return prev.map((n) => (n.id === noteId ? { ...n, ...mapped } : n));
           return [mapped, ...prev];
         });
-      } catch { /* ignore */ }
+      } catch (e: any) {
+        // 404 → note no longer accessible to us; drop it locally.
+        if (e?.status === 404) {
+          setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        }
+      }
     };
 
     es.onmessage = (ev) => {
@@ -199,7 +202,7 @@ export function useNotes() {
           const isActive = activeNoteIdRef.current === msg.noteId;
           const isDirty = dirtyNotesRef.current.has(msg.noteId);
           if (isActive && isDirty) {
-            const viewers = presence[msg.noteId] || [];
+            const viewers = presenceRef.current[msg.noteId] || [];
             setRemoteUpdate({
               noteId: msg.noteId,
               by: viewers.find((v) => v.userId)?.displayName || null,
@@ -222,7 +225,7 @@ export function useNotes() {
     es.onerror = () => { /* EventSource auto-reconnects */ };
 
     return () => es.close();
-  }, [user, loadAll, presence]);
+  }, [user, loadAll]);
 
   // ---------- Presence: announce active note + heartbeat ----------
   useEffect(() => {
