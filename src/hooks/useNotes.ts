@@ -128,7 +128,7 @@ export function useNotes() {
         // The editor switched from Markdown to HTML. To avoid mixed/garbled
         // formatting, existing note bodies are cleared exactly once per user/device.
         // Password-protected notes are skipped (their content is encrypted).
-        const WIPE_FLAG = 'quill-content-wiped-v1';
+        const WIPE_FLAG = 'quill-content-wiped-v2';
         if (typeof window !== 'undefined' && !window.localStorage.getItem(WIPE_FLAG)) {
           const toWipe = allNotes.filter((n) => n.content && !n.password);
           for (const n of toWipe) {
