@@ -185,6 +185,12 @@ const Index = () => {
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -208,6 +214,12 @@ const Index = () => {
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           </div>
         </div>
@@ -231,6 +243,12 @@ const Index = () => {
               onBack={() => setMobileView('list')}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
               isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
+              currentUserId={user?.id}
+              viewers={activeNote ? presence[activeNote.id] || [] : []}
+              remoteUpdate={remoteUpdate} onDismissRemoteUpdate={dismissRemoteUpdate}
+              searchUsers={searchUsers} listShares={listShares}
+              shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
+              onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
             />
           )}
         </div>
@@ -241,6 +259,14 @@ const Index = () => {
         onOpenChange={setPickerOpen}
         notebooks={notebooks}
         onPick={handlePickNotebookForNewNote}
+        onCreate={createNotebook}
+      />
+      {/* Picker for placing a shared note into one of MY notebooks */}
+      <SelectNotebookDialog
+        open={!!sharedPickerNoteId}
+        onOpenChange={(o) => { if (!o) setSharedPickerNoteId(null); }}
+        notebooks={notebooks}
+        onPick={(nbId) => { if (sharedPickerNoteId) setSharedNoteNotebook(sharedPickerNoteId, nbId); setSharedPickerNoteId(null); }}
         onCreate={createNotebook}
       />
     </div>
