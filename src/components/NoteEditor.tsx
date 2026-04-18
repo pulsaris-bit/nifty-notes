@@ -293,6 +293,28 @@ export function NoteEditor({
               {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
             </button>
           )}
+          {/* Share — owner only, hidden when locked (per requirements) */}
+          {isOwner && !trashMode && !isLocked && shareNote && (
+            <button
+              onClick={() => setShowShareDialog(true)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Delen"
+            >
+              <Share2 size={16} />
+            </button>
+          )}
+          {/* Pick recipient notebook — only for shared notes that are still in the inbox */}
+          {isShared && note.notebookId === '__shared__' && onPickSharedNotebook && (
+            <button
+              onClick={() => onPickSharedNotebook(note.id)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="In een notebook plaatsen"
+            >
+              <FolderInput size={16} />
+            </button>
+          )}
+          {/* Labels — owner only */}
+          {isOwner && (
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
@@ -329,7 +351,9 @@ export function NoteEditor({
               </div>
             )}
           </div>
-          {/* Lock button */}
+          )}
+          {/* Lock button — owner only */}
+          {isOwner && (
           <div className="relative">
             <button onClick={() => {
               if (isLocked && isUnlocked && note) {
@@ -374,26 +398,32 @@ export function NoteEditor({
               </>
             )}
           </div>
-          {isLocked && isUnlocked && (
+          )}
+          {isOwner && isLocked && isUnlocked && (
             <button onClick={handleRemovePassword}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               title="Wachtwoord verwijderen">
               <LockOpen size={16} />
             </button>
           )}
+          {/* Pin — owner only */}
+          {isOwner && (
           <button onClick={() => onUpdate(note.id, { pinned: !note.pinned })}
             className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
             {note.pinned ? <PinOff size={16} /> : <Pin size={16} />}
           </button>
-          {!trashMode && (
+          )}
+          {/* Archive — owner only */}
+          {isOwner && !trashMode && (
             <button onClick={() => onArchive(note.id)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               title={note.archived ? 'Dearchiveren' : 'Archiveren'}>
               {note.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
             </button>
           )}
-          {!trashMode && (
+          {/* Trash (owner) / Leave (recipient) */}
+          {!trashMode && isOwner && (
             <button onClick={() => onDelete(note.id)}
               className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Naar prullenbak">
               <Trash2 size={16} />
