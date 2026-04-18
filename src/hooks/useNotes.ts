@@ -88,10 +88,18 @@ export function useNotes() {
   const activeNoteIdRef = useRef<string | null>(null);
   useEffect(() => { activeNoteIdRef.current = activeNoteId; }, [activeNoteId]);
 
+  // Latest presence map kept in a ref so the SSE effect doesn't need to
+  // re-subscribe (and tear down the EventSource) on every presence update.
+  const presenceRef = useRef<Record<string, PresenceViewer[]>>({});
+  useEffect(() => { presenceRef.current = presence; }, [presence]);
+
   // Track per-note pending-write flag so we know to show the banner instead of stomping content.
   const dirtyNotesRef = useRef<Set<string>>(new Set());
   const markDirty = (id: string) => { dirtyNotesRef.current.add(id); };
   const markClean = (id: string) => { dirtyNotesRef.current.delete(id); };
+
+  // Pending PATCH coalescing per note (debounce title/content saves).
+  const pendingPatchRef = useRef<Map<string, { updates: Record<string, unknown>; timer: number }>>(new Map());
 
   // ---------- Initial load ----------
   const loadAll = useCallback(async () => {
@@ -164,16 +172,19 @@ export function useNotes() {
 
     const refetchNote = async (noteId: string) => {
       try {
-        const fresh = await api<any[]>('/notes');
-        const found = fresh.find((n) => n.id === noteId);
+        const found = await api<any>(`/notes/${noteId}`);
         setNotes((prev) => {
-          if (!found) return prev.filter((n) => n.id !== noteId);
           const mapped = mapApiNote(found);
           const exists = prev.some((n) => n.id === noteId);
           if (exists) return prev.map((n) => (n.id === noteId ? { ...n, ...mapped } : n));
           return [mapped, ...prev];
         });
-      } catch { /* ignore */ }
+      } catch (e: any) {
+        // 404 → note no longer accessible to us; drop it locally.
+        if (e?.status === 404) {
+          setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        }
+      }
     };
 
     es.onmessage = (ev) => {
@@ -191,7 +202,7 @@ export function useNotes() {
           const isActive = activeNoteIdRef.current === msg.noteId;
           const isDirty = dirtyNotesRef.current.has(msg.noteId);
           if (isActive && isDirty) {
-            const viewers = presence[msg.noteId] || [];
+            const viewers = presenceRef.current[msg.noteId] || [];
             setRemoteUpdate({
               noteId: msg.noteId,
               by: viewers.find((v) => v.userId)?.displayName || null,
@@ -214,7 +225,7 @@ export function useNotes() {
     es.onerror = () => { /* EventSource auto-reconnects */ };
 
     return () => es.close();
-  }, [user, loadAll, presence]);
+  }, [user, loadAll]);
 
   // ---------- Presence: announce active note + heartbeat ----------
   useEffect(() => {
@@ -330,19 +341,64 @@ export function useNotes() {
     return newNote.id;
   }, [activeNotebookId, activeLabelId, notebooks]);
 
+  // Flush a pending coalesced PATCH for one note immediately.
+  const flushPendingPatch = useCallback((id: string) => {
+    const entry = pendingPatchRef.current.get(id);
+    if (!entry) return;
+    window.clearTimeout(entry.timer);
+    pendingPatchRef.current.delete(id);
+    api(`/notes/${id}`, { method: 'PATCH', body: entry.updates })
+      .then(() => markClean(id))
+      .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+  }, []);
+
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date() } : n))
     );
     markDirty(id);
-    if (HAS_API) {
-      api(`/notes/${id}`, { method: 'PATCH', body: updates })
-        .then(() => markClean(id))
-        .catch((e) => { markClean(id); console.error('updateNote failed', e); });
-    } else {
-      markClean(id);
+    if (!HAS_API) { markClean(id); return; }
+
+    // Coalesce rapid title/content edits into one PATCH every ~400 ms.
+    // Other fields (pin, password, labels, archived) are sent immediately.
+    const keys = Object.keys(updates);
+    const onlyTextual = keys.length > 0 && keys.every((k) => k === 'title' || k === 'content');
+    if (onlyTextual) {
+      const existing = pendingPatchRef.current.get(id);
+      const merged = { ...(existing?.updates || {}), ...updates };
+      if (existing) window.clearTimeout(existing.timer);
+      const timer = window.setTimeout(() => {
+        pendingPatchRef.current.delete(id);
+        api(`/notes/${id}`, { method: 'PATCH', body: merged })
+          .then(() => markClean(id))
+          .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+      }, 400);
+      pendingPatchRef.current.set(id, { updates: merged, timer });
+      return;
     }
-  }, []);
+
+    // Non-textual change → flush any pending textual edits first, then send.
+    flushPendingPatch(id);
+    api(`/notes/${id}`, { method: 'PATCH', body: updates })
+      .then(() => markClean(id))
+      .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+  }, [flushPendingPatch]);
+
+  // Flush pending writes when switching active note or before unload.
+  useEffect(() => {
+    return () => {
+      const prevId = activeNoteIdRef.current;
+      if (prevId) flushPendingPatch(prevId);
+    };
+  }, [activeNoteId, flushPendingPatch]);
+
+  useEffect(() => {
+    const onUnload = () => {
+      for (const id of pendingPatchRef.current.keys()) flushPendingPatch(id);
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [flushPendingPatch]);
 
   const archiveNote = useCallback((id: string) => {
     let nextArchived = false;
