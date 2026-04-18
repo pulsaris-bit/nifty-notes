@@ -5,6 +5,7 @@ import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archi
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMockAuth } from '@/hooks/useMockAuth';
+import { getDiceBearAvatar } from '@/lib/avatar';
 
 const EMOJI_OPTIONS = [
   '📓', '📕', '📗', '📘', '📙', '📒', '💼', '💡', '🎯', '🏠',
@@ -342,23 +343,14 @@ export function NoteSidebar({
 function UserBlock() {
   const { user, logout } = useMockAuth();
   if (!user) return null;
-  const initials = user.displayName
-    .split(' ')
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const avatarSrc = user.avatarUrl || getDiceBearAvatar(user.email || user.displayName);
 
   return (
     <div className="px-2 pt-2 pb-1 border-t border-sidebar-custom-border/40 mt-2">
       <div className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-custom-accent/40 transition-colors group">
         <Link to="/profile" className="flex items-center gap-2 flex-1 min-w-0" title="Profiel">
-          <div className="w-7 h-7 rounded-full bg-sidebar-custom-accent text-sidebar-custom-fg-active grid place-items-center overflow-hidden shrink-0 text-[11px] font-medium">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-            ) : (
-              <span>{initials}</span>
-            )}
+          <div className="w-7 h-7 rounded-full bg-sidebar-custom-accent overflow-hidden shrink-0">
+            <img src={avatarSrc} alt={user.displayName} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs text-sidebar-custom-fg-active truncate flex items-center gap-1">
