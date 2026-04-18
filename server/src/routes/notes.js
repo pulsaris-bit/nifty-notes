@@ -40,6 +40,15 @@ router.get('/', async (req, res) => {
   res.json([...owned, ...shared]);
 });
 
+// Trashed notes (owner only — recipients can't trash, only leave)
+// IMPORTANT: must be registered BEFORE '/:id' so Express doesn't treat
+// "trash" as a note id.
+router.get('/trash', async (req, res) => {
+  await purgeOldTrash(req.userId);
+  const notes = await fetchOwnedNotes(req.userId, 'deleted_at IS NOT NULL');
+  res.json(notes);
+});
+
 // Single note (owned or shared) — used by the realtime client to refetch only
 // what changed instead of fetching the whole list on every push.
 router.get('/:id', async (req, res) => {
@@ -57,13 +66,6 @@ router.get('/:id', async (req, res) => {
     return res.json(t);
   }
   res.json(found);
-});
-
-// Trashed notes (owner only — recipients can't trash, only leave)
-router.get('/trash', async (req, res) => {
-  await purgeOldTrash(req.userId);
-  const notes = await fetchOwnedNotes(req.userId, 'deleted_at IS NOT NULL');
-  res.json(notes);
 });
 
 router.post('/', async (req, res) => {
