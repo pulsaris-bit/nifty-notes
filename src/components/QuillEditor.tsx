@@ -116,14 +116,30 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
 
     const reveal = () => setToolbarHidden(false);
 
+    // iOS Safari may scroll the window/body to bring the focused contenteditable
+    // into view, pushing the note's header out of the viewport. Force the page
+    // back to the top whenever focus enters the editor.
+    const resetPageScroll = () => {
+      if (window.scrollY !== 0 || document.documentElement.scrollTop !== 0) {
+        window.scrollTo(0, 0);
+      }
+      if (document.body.scrollTop !== 0) document.body.scrollTop = 0;
+    };
+    const onFocusIn = () => {
+      reveal();
+      requestAnimationFrame(resetPageScroll);
+      setTimeout(resetPageScroll, 100);
+      setTimeout(resetPageScroll, 300);
+    };
+
     scrollEl.addEventListener('scroll', onScroll, { passive: true });
     editorEl.addEventListener('pointerdown', reveal);
-    editorEl.addEventListener('focusin', reveal);
+    editorEl.addEventListener('focusin', onFocusIn);
 
     return () => {
       scrollEl.removeEventListener('scroll', onScroll);
       editorEl.removeEventListener('pointerdown', reveal);
-      editorEl.removeEventListener('focusin', reveal);
+      editorEl.removeEventListener('focusin', onFocusIn);
     };
   }, []);
 
