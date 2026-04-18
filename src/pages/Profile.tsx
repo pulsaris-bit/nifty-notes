@@ -38,7 +38,7 @@ const Profile = () => {
     .toUpperCase();
 
   return (
-    <div className="min-h-[100dvh] bg-background px-4 py-8">
+    <div className="h-[100dvh] overflow-y-auto bg-background px-4 py-8">
       <div className="max-w-xl mx-auto">
         <Link
           to="/"
