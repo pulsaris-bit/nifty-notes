@@ -122,7 +122,25 @@ export function useNotes() {
         } else {
           setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
         }
-        setNotes([...ns.map(mapApiNote), ...trashed.map(mapApiNote)]);
+        let allNotes = [...ns.map(mapApiNote), ...trashed.map(mapApiNote)];
+
+        // --- One-time content wipe for the WYSIWYG (Quill) migration ---
+        // The editor switched from Markdown to HTML. To avoid mixed/garbled
+        // formatting, existing note bodies are cleared exactly once per user/device.
+        // Password-protected notes are skipped (their content is encrypted).
+        const WIPE_FLAG = 'quill-content-wiped-v2';
+        if (typeof window !== 'undefined' && !window.localStorage.getItem(WIPE_FLAG)) {
+          const toWipe = allNotes.filter((n) => n.content && !n.password);
+          for (const n of toWipe) {
+            api(`/notes/${n.id}`, { method: 'PATCH', body: { content: '' } }).catch((e) =>
+              console.error('content wipe failed', e),
+            );
+          }
+          allNotes = allNotes.map((n) => (n.password ? n : { ...n, content: '' }));
+          window.localStorage.setItem(WIPE_FLAG, '1');
+        }
+
+        setNotes(allNotes);
       } catch (e) {
         console.error('Failed to load data from API', e);
       }

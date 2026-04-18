@@ -85,3 +85,151 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* ---------- Quill (react-quill-new) theme integration ---------- */
+.quill-host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.quill-host .quill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.quill-host .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  padding: 6px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.quill-host .ql-container.ql-snow {
+  border: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+.quill-host .ql-editor {
+  padding: 24px max(24px, 4vw);
+  max-width: 820px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 100%;
+  line-height: 1.65;
+}
+.quill-host .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground) / 0.6);
+  font-style: normal;
+  left: max(24px, 4vw);
+  right: max(24px, 4vw);
+}
+.quill-host .ql-editor h1,
+.quill-host .ql-editor h2,
+.quill-host .ql-editor h3,
+.quill-host .ql-editor h4,
+.quill-host .ql-editor h5,
+.quill-host .ql-editor h6 {
+  font-family: var(--font-display);
+  color: hsl(var(--foreground));
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+/* Visible spacing between paragraphs so Enter (new <p>) and Shift+Enter
+   (a <br> within the same paragraph) are visually distinct. */
+.quill-host .ql-editor p {
+  margin: 0 0 0.85em 0;
+}
+.quill-host .ql-editor p:last-child {
+  margin-bottom: 0;
+}
+.quill-host .ql-editor a { color: hsl(var(--primary)); }
+.quill-host .ql-editor blockquote {
+  border-left: 3px solid hsl(var(--primary) / 0.5);
+  color: hsl(var(--muted-foreground));
+  padding-left: 12px;
+}
+.quill-host .ql-editor pre.ql-syntax,
+.quill-host .ql-editor pre {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 12px;
+}
+.quill-host .ql-editor code {
+  background: hsl(var(--muted));
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.quill-host .ql-snow .ql-stroke { stroke: hsl(var(--muted-foreground)); }
+.quill-host .ql-snow .ql-fill,
+.quill-host .ql-snow .ql-stroke.ql-fill { fill: hsl(var(--muted-foreground)); }
+.quill-host .ql-snow .ql-picker { color: hsl(var(--muted-foreground)); }
+.quill-host .ql-snow button:hover .ql-stroke,
+.quill-host .ql-snow .ql-picker-label:hover .ql-stroke,
+.quill-host .ql-snow button.ql-active .ql-stroke,
+.quill-host .ql-snow .ql-picker-label.ql-active .ql-stroke,
+.quill-host .ql-snow .ql-picker-item.ql-selected .ql-stroke {
+  stroke: hsl(var(--primary));
+}
+.quill-host .ql-snow button:hover .ql-fill,
+.quill-host .ql-snow .ql-picker-label:hover .ql-fill,
+.quill-host .ql-snow button.ql-active .ql-fill,
+.quill-host .ql-snow .ql-picker-label.ql-active .ql-fill,
+.quill-host .ql-snow .ql-picker-item.ql-selected .ql-fill {
+  fill: hsl(var(--primary));
+}
+.quill-host .ql-snow .ql-picker-options {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--popover-foreground));
+  border-radius: 6px;
+}
+.quill-host .ql-snow .ql-tooltip {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.1);
+  border-radius: 6px;
+}
+.quill-host .ql-snow .ql-tooltip input[type=text] {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: 4px;
+}
+/* Native HTML checkboxes inside Quill check-lists must be clickable */
+.quill-host .ql-editor ul[data-checked=true] > li::before,
+.quill-host .ql-editor ul[data-checked=false] > li::before {
+  cursor: pointer;
+}
+
+/* quill-table-better: keep its toolbar button compact (icon only) */
+.quill-host .ql-snow .ql-toolbar button.ql-table-better,
+.quill-host .ql-snow.ql-toolbar button.ql-table-better {
+  padding: 3px 5px;
+}
+/* Table styling inside the editor */
+.quill-host .ql-editor table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+.quill-host .ql-editor table td,
+.quill-host .ql-editor table th {
+  border: 1px solid hsl(var(--border));
+  padding: 6px 10px;
+  min-width: 40px;
+}
+.quill-host .ql-editor table th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
