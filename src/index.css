@@ -105,9 +105,10 @@
   padding: 6px 16px;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   max-height: 200px;
-  overflow: hidden;
+  /* overflow visible so picker dropdowns can escape the toolbar */
+  overflow: visible;
   opacity: 1;
   transform: translateY(0);
   transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.25s ease, padding 0.25s ease, border-color 0.25s ease;
@@ -120,6 +121,8 @@
   transform: translateY(-4px);
   border-bottom-color: transparent;
   pointer-events: none;
+  /* hide overflow only while collapsing, so buttons don't bleed out */
+  overflow: hidden;
 }
 .quill-host .ql-container.ql-snow {
   border: none;
@@ -197,6 +200,14 @@
   border: 1px solid hsl(var(--border));
   color: hsl(var(--popover-foreground));
   border-radius: 6px;
+  z-index: 30;
+}
+.quill-host .ql-snow .ql-picker.ql-expanded .ql-picker-options {
+  z-index: 30;
+}
+/* Ensure the toolbar itself establishes a stacking context above editor content */
+.quill-host .ql-toolbar.ql-snow {
+  z-index: 20;
 }
 .quill-host .ql-snow .ql-tooltip {
   background: hsl(var(--popover));

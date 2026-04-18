@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -25,9 +25,11 @@ interface NoteEditorProps {
   trashMode?: boolean;
   onRestore?: (id: string) => void;
   onPurge?: (id: string) => void;
+  /** When true, the note was just created and should open in edit mode. */
+  isNewNote?: boolean;
 }
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge }: NoteEditorProps) {
+export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge, isNewNote = false }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
@@ -36,6 +38,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
+  // 'edit' = quill toolbar visible & editable; 'view' = read-only without toolbar.
+  const [mode, setMode] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   // noteId -> derived plain content (only kept in memory for this session)
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
 
@@ -47,10 +51,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
+    // New note → edit mode; existing note → view mode (no toolbar).
+    setMode(isNewNote ? 'edit' : 'view');
     // Re-lock any previously unlocked notes when switching notes:
     // leaving a note must require the password again on return.
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
-  }, [note?.id]);
+  }, [note?.id, isNewNote]);
 
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
@@ -236,6 +242,16 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {!trashMode && !showLockedView && (
+            <button
+              onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
+              className={`p-1.5 rounded-md transition-colors ${mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              title={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+              aria-label={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+            >
+              {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
+            </button>
+          )}
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
@@ -394,14 +410,15 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               rows={1}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."
-              readOnly={trashMode}
+              readOnly={trashMode || mode === 'view'}
             />
           </div>
           {/* Quill editor */}
           <QuillEditor
             value={displayContent}
             onChange={handleContentChange}
-            readOnly={trashMode}
+            readOnly={trashMode || mode === 'view'}
+            hideToolbar={mode === 'view'}
             placeholder="Begin met schrijven..."
           />
         </>
