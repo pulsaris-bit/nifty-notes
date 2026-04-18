@@ -64,9 +64,13 @@ export function NoteEditor({
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
 
-  // Plain setter — the effect below reports the *effective* mode to the parent.
-  // (Calling side-effects inside a state updater is unreliable in StrictMode.)
-  const setMode = setModeRaw;
+  const setMode = useCallback((next: 'edit' | 'view' | ((current: 'edit' | 'view') => 'edit' | 'view')) => {
+    setModeRaw((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      if (resolved !== current) onModeChange?.(resolved);
+      return resolved;
+    });
+  }, [onModeChange]);
 
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;
@@ -128,13 +132,11 @@ export function NoteEditor({
   // Locked view appears whenever the content is encrypted and not yet unlocked this session.
   const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
 
-  // Notify parent of the *effective* mode when external constraints change.
-  // The wrapped setMode already notifies on user-driven changes; this covers
-  // cases like the note becoming read-only/locked while we are "editing".
+  // Notify parent of the effective mode when external constraints force view-mode.
   useEffect(() => {
     if (!note) { onModeChange?.('view'); return; }
     const effective = mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view';
-    onModeChange?.(effective);
+    if (effective !== mode) onModeChange?.(effective);
   }, [isReadOnly, mode, note, onModeChange, showLockedView]);
 
   // Display value: when content is encrypted+unlocked, show plaintext from session map.

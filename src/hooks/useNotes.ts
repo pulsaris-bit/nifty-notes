@@ -85,9 +85,15 @@ export function useNotes() {
   // Realtime: presence per note + remote-update banner for active note
   const [presence, setPresence] = useState<Record<string, PresenceViewer[]>>({});
   const [remoteUpdate, setRemoteUpdate] = useState<RemoteUpdateBanner | null>(null);
+  const activePresenceModeRef = useRef<'view' | 'edit'>('view');
 
   const activeNoteIdRef = useRef<string | null>(null);
   useEffect(() => { activeNoteIdRef.current = activeNoteId; }, [activeNoteId]);
+  useEffect(() => { activePresenceModeRef.current = activePresenceMode; }, [activePresenceMode]);
+
+  const setPresenceMode = useCallback((mode: 'view' | 'edit') => {
+    setActivePresenceMode(mode);
+  }, []);
 
   const setActiveNoteId = useCallback((id: string | null) => {
     setActivePresenceMode('view');
@@ -235,11 +241,24 @@ export function useNotes() {
   }, [user, loadAll]);
 
   // ---------- Presence: announce active note + heartbeat ----------
-  useEffect(() => {
-    if (!HAS_API || !user) return;
+  const syncPresence = useCallback(async (noteId: string | null, mode: 'view' | 'edit') => {
+    if (!HAS_API || !user) return true;
     const deviceId = getDeviceId();
-    api('/events/presence', { method: 'POST', body: { noteId: activeNoteId, deviceId, mode: activePresenceMode } })
-      .catch(() => undefined);
+    try {
+      await api('/events/presence', { method: 'POST', body: { noteId, deviceId, mode } });
+      return true;
+    } catch (e: any) {
+      if (e?.status === 409 && noteId) {
+        setActivePresenceMode('view');
+        const data = await api<{ viewers: PresenceViewer[] }>(`/events/presence/${noteId}`).catch(() => null);
+        if (data) setPresence((prev) => ({ ...prev, [noteId]: data.viewers || [] }));
+      }
+      return false;
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void syncPresence(activeNoteId, activePresenceMode);
     if (!activeNoteId) return;
 
     api<{ viewers: PresenceViewer[] }>(`/events/presence/${activeNoteId}`)
@@ -247,11 +266,11 @@ export function useNotes() {
       .catch(() => undefined);
 
     const heartbeat = window.setInterval(() => {
-      api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId, mode: activePresenceMode } })
+      api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId: getDeviceId(), mode: activePresenceModeRef.current } })
         .catch(() => undefined);
     }, 10_000);
     return () => window.clearInterval(heartbeat);
-  }, [activeNoteId, activePresenceMode, user]);
+  }, [activeNoteId, activePresenceMode, syncPresence]);
 
   // Notify on tab close (best-effort).
   useEffect(() => {
@@ -600,7 +619,7 @@ export function useNotes() {
     presence,
     remoteUpdate,
     dismissRemoteUpdate,
-    setActivePresenceMode,
+    setActivePresenceMode: setPresenceMode,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,

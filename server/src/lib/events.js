@@ -102,6 +102,37 @@ export function clearPresenceForNote(noteId, userId, deviceId) {
   return had;
 }
 
+export function getActiveEditor(noteId, excludedUserId = null) {
+  const noteMap = presence.get(noteId);
+  if (!noteMap) return null;
+  const now = Date.now();
+
+  for (const [userId, data] of noteMap) {
+    let isActive = false;
+    let isEditing = false;
+
+    for (const [dev, meta] of data.devices) {
+      if (now - meta.lastSeen > PRESENCE_TIMEOUT_MS) data.devices.delete(dev);
+      else {
+        isActive = true;
+        if (meta.mode === 'edit') isEditing = true;
+      }
+    }
+
+    if (!isActive) {
+      noteMap.delete(userId);
+      continue;
+    }
+
+    if (isEditing && userId !== excludedUserId) {
+      return { userId, displayName: data.displayName };
+    }
+  }
+
+  if (noteMap.size === 0) presence.delete(noteId);
+  return null;
+}
+
 export function listViewers(noteId) {
   const noteMap = presence.get(noteId);
   if (!noteMap) return [];
