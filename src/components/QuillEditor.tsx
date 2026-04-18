@@ -128,7 +128,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder }: 
   return (
     <div
       ref={hostRef}
-      className={`quill-host flex-1 flex flex-col min-h-0 ${toolbarHidden ? 'toolbar-hidden' : ''}`}
+      className={`quill-host flex-1 flex flex-col min-h-0 ${toolbarHidden || hideToolbar ? 'toolbar-hidden' : ''} ${hideToolbar ? 'toolbar-removed' : ''}`}
     >
       <ReactQuill
         ref={ref}
