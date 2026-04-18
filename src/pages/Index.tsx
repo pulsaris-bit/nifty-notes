@@ -191,6 +191,7 @@ const Index = () => {
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       ) : isTablet ? (
