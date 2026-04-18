@@ -322,9 +322,10 @@ export function NoteEditor({
           <PresenceAvatars viewers={viewers} currentUserId={currentUserId} />
           {!trashMode && !showLockedView && (
             <button
-              onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
-              className={`p-1.5 rounded-md transition-colors ${mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              title={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+              onClick={() => { if (!lockedByOthers) setMode((m) => (m === 'edit' ? 'view' : 'edit')); }}
+              disabled={lockedByOthers}
+              className={`p-1.5 rounded-md transition-colors ${lockedByOthers ? 'opacity-40 cursor-not-allowed text-muted-foreground' : mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              title={lockedByOthers ? `Wordt bekeken door ${otherViewers[0]?.displayName ?? 'een andere gebruiker'} — bewerken geblokkeerd` : mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
               aria-label={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
             >
               {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}
