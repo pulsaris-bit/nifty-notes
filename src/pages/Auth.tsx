@@ -226,13 +226,6 @@ const Auth = () => {
               </TabsContent>
             </Tabs>
           </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-              Demo-modus: gegevens worden lokaal in je browser bewaard.
-              <br />
-              Geen echte beveiliging — niet gebruiken voor gevoelige data.
-            </p>
-          </CardContent>
         </Card>
       </motion.div>
     </div>
