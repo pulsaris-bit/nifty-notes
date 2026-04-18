@@ -29,6 +29,7 @@ const Index = () => {
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
+    noteCountByNotebook, noteCountByLabel,
     presence, remoteUpdate, dismissRemoteUpdate,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
@@ -36,12 +37,6 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
-
-  const noteCountByNotebook = useMemo(() => {
-    const counts: Record<string, number> = {};
-    notes.forEach((n) => { counts[n.notebookId] = (counts[n.notebookId] || 0) + 1; });
-    return counts;
-  }, [notes]);
 
   // When on mobile and a note becomes active via selection, switch to editor pane.
   const handleSelectNote = (id: string) => {
