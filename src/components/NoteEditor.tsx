@@ -381,11 +381,18 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         <>
           {/* Title */}
           <div className="pt-6 pb-2 w-full" style={{ paddingLeft: 'max(24px, 4vw)', paddingRight: 'max(24px, 4vw)' }}>
-            <input
+            <textarea
               value={note.title}
               onChange={(e) => onUpdate(note.id, { title: e.target.value })}
               onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
-              className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
+              ref={(el) => {
+                if (!el) return;
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
+              }}
+              rows={1}
+              className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."
               readOnly={trashMode}
             />
