@@ -31,6 +31,7 @@ const Index = () => {
     searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
     noteCountByNotebook, noteCountByLabel,
     presence, remoteUpdate, dismissRemoteUpdate,
+    setActivePresenceMode,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
@@ -190,6 +191,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           </ResizablePanel>
@@ -222,6 +224,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           </div>
@@ -254,6 +257,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           )}

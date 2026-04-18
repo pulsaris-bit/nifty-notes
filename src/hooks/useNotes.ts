@@ -75,11 +75,12 @@ export function useNotes() {
   const [notes, setNotes] = useState<Note[]>(HAS_API ? [] : purgeMockTrash(defaultNotes));
   const [labels, setLabels] = useState<Label[]>(HAS_API ? [] : defaultLabels);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(HAS_API ? null : 'n-1');
+  const [activeNoteId, setRawActiveNoteId] = useState<string | null>(HAS_API ? null : 'n-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
+  const [activePresenceMode, setActivePresenceMode] = useState<'view' | 'edit'>('view');
 
   // Realtime: presence per note + remote-update banner for active note
   const [presence, setPresence] = useState<Record<string, PresenceViewer[]>>({});
@@ -87,6 +88,11 @@ export function useNotes() {
 
   const activeNoteIdRef = useRef<string | null>(null);
   useEffect(() => { activeNoteIdRef.current = activeNoteId; }, [activeNoteId]);
+
+  const setActiveNoteId = useCallback((id: string | null) => {
+    setActivePresenceMode('view');
+    setRawActiveNoteId(id);
+  }, []);
 
   // Latest presence map kept in a ref so the SSE effect doesn't need to
   // re-subscribe (and tear down the EventSource) on every presence update.
@@ -232,16 +238,20 @@ export function useNotes() {
   useEffect(() => {
     if (!HAS_API || !user) return;
     const deviceId = getDeviceId();
-    api('/events/presence', { method: 'POST', body: { noteId: activeNoteId, deviceId } })
+    api('/events/presence', { method: 'POST', body: { noteId: activeNoteId, deviceId, mode: activePresenceMode } })
       .catch(() => undefined);
     if (!activeNoteId) return;
 
+    api<{ viewers: PresenceViewer[] }>(`/events/presence/${activeNoteId}`)
+      .then((data) => setPresence((prev) => ({ ...prev, [activeNoteId]: data.viewers || [] })))
+      .catch(() => undefined);
+
     const heartbeat = window.setInterval(() => {
-      api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId } })
+      api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId, mode: activePresenceMode } })
         .catch(() => undefined);
     }, 20_000);
     return () => window.clearInterval(heartbeat);
-  }, [activeNoteId, user]);
+  }, [activeNoteId, activePresenceMode, user]);
 
   // Notify on tab close (best-effort).
   useEffect(() => {
@@ -590,6 +600,7 @@ export function useNotes() {
     presence,
     remoteUpdate,
     dismissRemoteUpdate,
+    setActivePresenceMode,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
