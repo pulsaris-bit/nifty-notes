@@ -88,10 +88,18 @@ export function useNotes() {
   const activeNoteIdRef = useRef<string | null>(null);
   useEffect(() => { activeNoteIdRef.current = activeNoteId; }, [activeNoteId]);
 
+  // Latest presence map kept in a ref so the SSE effect doesn't need to
+  // re-subscribe (and tear down the EventSource) on every presence update.
+  const presenceRef = useRef<Record<string, PresenceViewer[]>>({});
+  useEffect(() => { presenceRef.current = presence; }, [presence]);
+
   // Track per-note pending-write flag so we know to show the banner instead of stomping content.
   const dirtyNotesRef = useRef<Set<string>>(new Set());
   const markDirty = (id: string) => { dirtyNotesRef.current.add(id); };
   const markClean = (id: string) => { dirtyNotesRef.current.delete(id); };
+
+  // Pending PATCH coalescing per note (debounce title/content saves).
+  const pendingPatchRef = useRef<Map<string, { updates: Record<string, unknown>; timer: number }>>(new Map());
 
   // ---------- Initial load ----------
   const loadAll = useCallback(async () => {
