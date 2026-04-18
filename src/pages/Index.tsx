@@ -268,10 +268,10 @@ const Index = () => {
       )}
 
       <SelectNotebookDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
+        open={pickerOpen || mustCreateFirstNotebook}
+        onOpenChange={(o) => { if (!mustCreateFirstNotebook) setPickerOpen(o); }}
         notebooks={notebooks}
-        onPick={handlePickNotebookForNewNote}
+        onPick={mustCreateFirstNotebook ? (id) => setActiveNotebookId(id) : handlePickNotebookForNewNote}
         onCreate={createNotebook}
       />
       {/* Picker for placing a shared note into one of MY notebooks */}
