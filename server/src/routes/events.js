@@ -68,7 +68,8 @@ router.post('/presence', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Heartbeat — refreshes lastSeen for the active note.
+// Heartbeat — refreshes lastSeen for the active note. Also broadcasts so
+// late-joining clients (or clients that missed an SSE frame) see the current mode.
 router.post('/presence/ping', requireAuth, async (req, res) => {
   const parsed = presenceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
@@ -79,7 +80,13 @@ router.post('/presence/ping', requireAuth, async (req, res) => {
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = $1 LIMIT 1`,
       [req.userId],
     );
+    // Detect mode transition (view <-> edit) and rebroadcast on change.
+    const before = JSON.stringify(listViewers(noteId));
     setPresence(noteId, req.userId, deviceId, rows[0]?.display_name || 'Onbekend', mode);
+    const after = JSON.stringify(listViewers(noteId));
+    if (before !== after) {
+      await broadcastPresence(noteId).catch(() => undefined);
+    }
   }
   res.json({ ok: true });
 });
