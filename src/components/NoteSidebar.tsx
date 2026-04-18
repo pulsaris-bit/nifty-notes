@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, LogOut, Shield, User as UserIcon } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
@@ -56,6 +57,9 @@ export function NoteSidebar({
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [editLabelName, setEditLabelName] = useState('');
 
+  const newEmojiBtnRef = useRef<HTMLButtonElement>(null);
+  const editEmojiBtnRef = useRef<HTMLButtonElement>(null);
+
   const handleCreateNb = () => {
     if (newNbName.trim()) { onCreateNotebook(newNbName.trim(), newNbEmoji); setNewNbName(''); setNewNbEmoji('📓'); setIsCreatingNb(false); }
   };
@@ -75,16 +79,75 @@ export function NoteSidebar({
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
-  const EmojiGrid = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
-    <div className="grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48">
-      {EMOJI_OPTIONS.map((emoji) => (
-        <button key={emoji} onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
-          className={`w-7 h-7 flex items-center justify-center rounded text-base hover:bg-accent transition-colors ${selected === emoji ? 'bg-accent ring-1 ring-primary' : ''}`}>
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
+  // Emoji picker rendered via a portal in fixed positioning so it can break out
+  // of the sidebar's `overflow-hidden`/`overflow-y-auto` ancestors and float
+  // above other sections (labels, user block, etc.).
+  const EmojiPicker = ({
+    anchorRef,
+    selected,
+    onSelect,
+    onClose,
+  }: {
+    anchorRef: React.RefObject<HTMLElement>;
+    selected: string;
+    onSelect: (e: string) => void;
+    onClose: () => void;
+  }) => {
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+    useLayoutEffect(() => {
+      const update = () => {
+        const el = anchorRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const PICKER_W = 192; // w-48
+        const PICKER_H = 200; // approx 5 rows
+        const margin = 8;
+        let left = r.left;
+        let top = r.bottom + 4;
+        // Flip up if not enough room below
+        if (top + PICKER_H > window.innerHeight - margin) {
+          top = Math.max(margin, r.top - PICKER_H - 4);
+        }
+        // Clamp horizontally
+        if (left + PICKER_W > window.innerWidth - margin) {
+          left = window.innerWidth - PICKER_W - margin;
+        }
+        if (left < margin) left = margin;
+        setPos({ top, left });
+      };
+      update();
+      window.addEventListener('resize', update);
+      window.addEventListener('scroll', update, true);
+      return () => {
+        window.removeEventListener('resize', update);
+        window.removeEventListener('scroll', update, true);
+      };
+    }, [anchorRef]);
+
+    if (!pos) return null;
+    return createPortal(
+      <>
+        <div className="fixed inset-0 z-[60]" onClick={onClose} />
+        <div
+          className="fixed z-[61] grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48"
+          style={{ top: pos.top, left: pos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {EMOJI_OPTIONS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
+              className={`w-7 h-7 flex items-center justify-center rounded text-base hover:bg-accent transition-colors ${selected === emoji ? 'bg-accent ring-1 ring-primary' : ''}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </>,
+      document.body,
+    );
+  };
 
   return (
     <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
@@ -129,17 +192,17 @@ export function NoteSidebar({
                     <div key={nb.id} className="mx-2 mb-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="relative">
-                          <button onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
+                          <button ref={editEmojiBtnRef} onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
                             className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
                             {editNbEmoji}
                           </button>
                           {showEditEmojiPicker && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setShowEditEmojiPicker(false)} />
-                              <div className="absolute left-0 top-9 z-50">
-                                <EmojiGrid selected={editNbEmoji} onSelect={(e) => { setEditNbEmoji(e); setShowEditEmojiPicker(false); }} />
-                              </div>
-                            </>
+                            <EmojiPicker
+                              anchorRef={editEmojiBtnRef}
+                              selected={editNbEmoji}
+                              onSelect={(e) => { setEditNbEmoji(e); setShowEditEmojiPicker(false); }}
+                              onClose={() => setShowEditEmojiPicker(false)}
+                            />
                           )}
                         </div>
                         <input autoFocus value={editNbName} onChange={(e) => setEditNbName(e.target.value)}
@@ -166,17 +229,17 @@ export function NoteSidebar({
                   <div className="mx-2 mt-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <button onClick={() => setShowNewEmojiPicker(!showNewEmojiPicker)}
+                        <button ref={newEmojiBtnRef} onClick={() => setShowNewEmojiPicker(!showNewEmojiPicker)}
                           className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
                           {newNbEmoji}
                         </button>
                         {showNewEmojiPicker && (
-                          <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowNewEmojiPicker(false)} />
-                            <div className="absolute left-0 top-9 z-50">
-                              <EmojiGrid selected={newNbEmoji} onSelect={(e) => { setNewNbEmoji(e); setShowNewEmojiPicker(false); }} />
-                            </div>
-                          </>
+                          <EmojiPicker
+                            anchorRef={newEmojiBtnRef}
+                            selected={newNbEmoji}
+                            onSelect={(e) => { setNewNbEmoji(e); setShowNewEmojiPicker(false); }}
+                            onClose={() => setShowNewEmojiPicker(false)}
+                          />
                         )}
                       </div>
                       <input autoFocus value={newNbName} onChange={(e) => setNewNbName(e.target.value)}
