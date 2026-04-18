@@ -76,16 +76,75 @@ export function NoteSidebar({
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
-  const EmojiGrid = ({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) => (
-    <div className="grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48">
-      {EMOJI_OPTIONS.map((emoji) => (
-        <button key={emoji} onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
-          className={`w-7 h-7 flex items-center justify-center rounded text-base hover:bg-accent transition-colors ${selected === emoji ? 'bg-accent ring-1 ring-primary' : ''}`}>
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
+  // Emoji picker rendered via a portal in fixed positioning so it can break out
+  // of the sidebar's `overflow-hidden`/`overflow-y-auto` ancestors and float
+  // above other sections (labels, user block, etc.).
+  const EmojiPicker = ({
+    anchorRef,
+    selected,
+    onSelect,
+    onClose,
+  }: {
+    anchorRef: React.RefObject<HTMLElement>;
+    selected: string;
+    onSelect: (e: string) => void;
+    onClose: () => void;
+  }) => {
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+    useLayoutEffect(() => {
+      const update = () => {
+        const el = anchorRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const PICKER_W = 192; // w-48
+        const PICKER_H = 200; // approx 5 rows
+        const margin = 8;
+        let left = r.left;
+        let top = r.bottom + 4;
+        // Flip up if not enough room below
+        if (top + PICKER_H > window.innerHeight - margin) {
+          top = Math.max(margin, r.top - PICKER_H - 4);
+        }
+        // Clamp horizontally
+        if (left + PICKER_W > window.innerWidth - margin) {
+          left = window.innerWidth - PICKER_W - margin;
+        }
+        if (left < margin) left = margin;
+        setPos({ top, left });
+      };
+      update();
+      window.addEventListener('resize', update);
+      window.addEventListener('scroll', update, true);
+      return () => {
+        window.removeEventListener('resize', update);
+        window.removeEventListener('scroll', update, true);
+      };
+    }, [anchorRef]);
+
+    if (!pos) return null;
+    return createPortal(
+      <>
+        <div className="fixed inset-0 z-[60]" onClick={onClose} />
+        <div
+          className="fixed z-[61] grid grid-cols-6 gap-1 p-2 bg-card border border-border rounded-lg shadow-xl w-48"
+          style={{ top: pos.top, left: pos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {EMOJI_OPTIONS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={(e) => { e.stopPropagation(); onSelect(emoji); }}
+              className={`w-7 h-7 flex items-center justify-center rounded text-base hover:bg-accent transition-colors ${selected === emoji ? 'bg-accent ring-1 ring-primary' : ''}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </>,
+      document.body,
+    );
+  };
 
   return (
     <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
