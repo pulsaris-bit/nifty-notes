@@ -162,6 +162,24 @@ export function useNotes() {
     });
   }, []);
 
+  // Single-note refetch — also exposed for view-mode polling.
+  const refetchNote = useCallback(async (noteId: string) => {
+    if (!HAS_API) return;
+    try {
+      const found = await api<any>(`/notes/${noteId}`);
+      setNotes((prev) => {
+        const mapped = mapApiNote(found);
+        const exists = prev.some((n) => n.id === noteId);
+        if (exists) return prev.map((n) => (n.id === noteId ? { ...n, ...mapped } : n));
+        return [mapped, ...prev];
+      });
+    } catch (e: any) {
+      if (e?.status === 404) {
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      }
+    }
+  }, []);
+
   // ---------- SSE realtime ----------
   useEffect(() => {
     if (!HAS_API || !user) return;
@@ -169,23 +187,6 @@ export function useNotes() {
     if (!url) return;
     const myDeviceId = getDeviceId();
     const es = new EventSource(url);
-
-    const refetchNote = async (noteId: string) => {
-      try {
-        const found = await api<any>(`/notes/${noteId}`);
-        setNotes((prev) => {
-          const mapped = mapApiNote(found);
-          const exists = prev.some((n) => n.id === noteId);
-          if (exists) return prev.map((n) => (n.id === noteId ? { ...n, ...mapped } : n));
-          return [mapped, ...prev];
-        });
-      } catch (e: any) {
-        // 404 → note no longer accessible to us; drop it locally.
-        if (e?.status === 404) {
-          setNotes((prev) => prev.filter((n) => n.id !== noteId));
-        }
-      }
-    };
 
     es.onmessage = (ev) => {
       try {
