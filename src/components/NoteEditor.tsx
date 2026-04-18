@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput } from 'lucide-react';
 import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { format } from 'date-fns';
@@ -315,42 +315,16 @@ export function NoteEditor({
           )}
           {/* Labels — owner only */}
           {isOwner && (
-          <div className="relative">
-            <button onClick={() => setShowLabelPicker(!showLabelPicker)}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
-              <Tag size={16} />
-            </button>
-            {showLabelPicker && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-2">
-                <div className="px-3 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Labels</div>
-                <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                  {labels.map((label) => {
-                    const isActive = note.labelIds.includes(label.id);
-                    return (
-                      <button key={label.id} onClick={() => onToggleLabel(note.id, label.id)}
-                        className={`w-full px-3 py-1.5 flex items-center gap-2.5 text-sm hover:bg-muted/50 transition-colors ${isActive ? 'bg-muted/30' : ''}`}>
-                        <span className="w-3 h-3 rounded-full shrink-0 border-2" style={{
-                          backgroundColor: isActive ? label.color : 'transparent',
-                          borderColor: label.color,
-                        }} />
-                        <span className="flex-1 text-left truncate">{label.name}</span>
-                        {isActive && <span className="text-xs text-muted-foreground">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="border-t border-border mt-1 pt-1 px-2">
-                  <div className="flex items-center gap-1">
-                    <input value={newLabelName} onChange={(e) => setNewLabelName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddNewLabel(); }}
-                      placeholder="Nieuw label..."
-                      className="flex-1 text-sm px-2 py-1 bg-transparent outline-none placeholder:text-muted-foreground/50" />
-                    <button onClick={handleAddNewLabel} className="p-1 text-muted-foreground hover:text-foreground"><Plus size={14} /></button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <LabelPicker
+            open={showLabelPicker}
+            onOpenChange={setShowLabelPicker}
+            labels={labels}
+            activeLabelIds={note.labelIds}
+            onToggleLabel={(lid) => onToggleLabel(note.id, lid)}
+            newLabelName={newLabelName}
+            setNewLabelName={setNewLabelName}
+            onAddNewLabel={handleAddNewLabel}
+          />
           )}
           {/* Lock button — owner only */}
           {isOwner && (
