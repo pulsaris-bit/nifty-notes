@@ -135,12 +135,13 @@ export function NoteEditor({
   // Locked view appears whenever the content is encrypted and not yet unlocked this session.
   const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
 
+  // Notify parent of the *effective* mode when external constraints change.
+  // The wrapped setMode already notifies on user-driven changes; this covers
+  // cases like the note becoming read-only/locked while we are "editing".
   useEffect(() => {
-    if (!note) {
-      onModeChange?.('view');
-      return;
-    }
-    onModeChange?.(mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view');
+    if (!note) { onModeChange?.('view'); return; }
+    const effective = mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view';
+    onModeChange?.(effective);
   }, [isReadOnly, mode, note, onModeChange, showLockedView]);
 
   // Display value: when content is encrypted+unlocked, show plaintext from session map.
