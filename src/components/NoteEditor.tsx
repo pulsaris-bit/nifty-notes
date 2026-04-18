@@ -49,15 +49,19 @@ export function NoteEditor({
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [lockPassword, setLockPassword] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-  // 'edit' = quill toolbar visible & editable; 'view' = read-only without toolbar.
   const [mode, setMode] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
-  // noteId -> derived plain content (only kept in memory for this session)
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
+
+  // Permissions derived from the note
+  const isShared = !!note?.sharedBy;
+  const isReadOnly = trashMode || (isShared && note?.permission === 'read');
+  const isOwner = !isShared;
 
   useEffect(() => {
     setShowLabelPicker(false);
