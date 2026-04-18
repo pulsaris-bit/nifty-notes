@@ -142,7 +142,14 @@
   margin-top: 1.2em;
   margin-bottom: 0.4em;
 }
-.quill-host .ql-editor a { color: hsl(var(--primary)); }
+/* Visible spacing between paragraphs so Enter (new <p>) and Shift+Enter
+   (a <br> within the same paragraph) are visually distinct. */
+.quill-host .ql-editor p {
+  margin: 0 0 0.85em 0;
+}
+.quill-host .ql-editor p:last-child {
+  margin-bottom: 0;
+}
 .quill-host .ql-editor blockquote {
   border-left: 3px solid hsl(var(--primary) / 0.5);
   color: hsl(var(--muted-foreground));
