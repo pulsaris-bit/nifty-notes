@@ -7,6 +7,7 @@ import noteRoutes from './routes/notes.js';
 import shareRoutes from './routes/shares.js';
 import userRoutes from './routes/users.js';
 import eventsRoutes from './routes/events.js';
+import uploadsRoutes, { UPLOADS_DIR } from './routes/uploads.js';
 import { pool } from './db.js';
 import { startPresenceSweeper } from './lib/events.js';
 import { recipientsForNote } from './lib/notes.js';
@@ -31,6 +32,13 @@ app.use('/api/notebooks', notebookRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/uploads', uploadsRoutes);
+// Serve uploaded files (images embedded in notes). Long cache: filenames are unique.
+app.use('/api/uploads', express.static(UPLOADS_DIR, {
+  maxAge: '30d',
+  immutable: true,
+  fallthrough: false,
+}));
 // Share routes register paths under /api (e.g. /api/notes/:id/shares and
 // /api/notes/shared-with-me/:id), so mount at /api.
 app.use('/api', shareRoutes);
