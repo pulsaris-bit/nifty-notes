@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import QuillTableBetter from 'quill-table-better';
@@ -26,10 +26,15 @@ interface QuillEditorProps {
  * Synology-style note editor: headings, inline formatting, color/background,
  * lists (incl. checkboxes), alignment, indent, links/images/video, code, and
  * tables (via quill-table-better).
+ *
+ * The toolbar auto-hides when the user scrolls the editor content and reappears
+ * on click/focus inside the editable area.
  */
 export function QuillEditor({ value, onChange, readOnly = false, placeholder }: QuillEditorProps) {
   ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [toolbarHidden, setToolbarHidden] = useState(false);
 
   const modules = useMemo(
     () => ({
@@ -83,8 +88,48 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder }: 
     editor.enable(!readOnly);
   }, [readOnly]);
 
+  // Hide the toolbar when the user scrolls inside the editor; show it again
+  // on click / touch / focus inside the editable area.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const scrollEl = host.querySelector<HTMLElement>('.ql-container');
+    const editorEl = host.querySelector<HTMLElement>('.ql-editor');
+    if (!scrollEl || !editorEl) return;
+
+    let lastScrollTop = scrollEl.scrollTop;
+
+    const onScroll = () => {
+      const top = scrollEl.scrollTop;
+      const delta = top - lastScrollTop;
+      // Only hide once we've scrolled a bit past the top, so the toolbar stays
+      // visible at the very top of the note.
+      if (top > 24 && Math.abs(delta) > 4) {
+        setToolbarHidden(true);
+      } else if (top <= 8) {
+        setToolbarHidden(false);
+      }
+      lastScrollTop = top;
+    };
+
+    const reveal = () => setToolbarHidden(false);
+
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    editorEl.addEventListener('pointerdown', reveal);
+    editorEl.addEventListener('focusin', reveal);
+
+    return () => {
+      scrollEl.removeEventListener('scroll', onScroll);
+      editorEl.removeEventListener('pointerdown', reveal);
+      editorEl.removeEventListener('focusin', reveal);
+    };
+  }, []);
+
   return (
-    <div className="quill-host flex-1 flex flex-col min-h-0">
+    <div
+      ref={hostRef}
+      className={`quill-host flex-1 flex flex-col min-h-0 ${toolbarHidden ? 'toolbar-hidden' : ''}`}
+    >
       <ReactQuill
         ref={ref}
         theme="snow"

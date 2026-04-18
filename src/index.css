@@ -106,6 +106,20 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  max-height: 200px;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.25s ease, opacity 0.2s ease, transform 0.25s ease, padding 0.25s ease, border-color 0.25s ease;
+}
+.quill-host.toolbar-hidden .ql-toolbar.ql-snow {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  border-bottom-color: transparent;
+  pointer-events: none;
 }
 .quill-host .ql-container.ql-snow {
   border: none;
