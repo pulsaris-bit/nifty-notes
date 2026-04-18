@@ -44,6 +44,10 @@
 
     --note-list-bg: 40 18% 95%;
 
+    /* Realtime presence indicator (someone else is viewing) */
+    --presence: 142 70% 38%;
+    --presence-foreground: 0 0% 100%;
+
     --font-display: 'Roboto', sans-serif;
     --font-body: 'Roboto', sans-serif;
 

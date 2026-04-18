@@ -126,7 +126,7 @@ export function NoteList({
                 {note.sharedBy && <Share2 size={12} className="text-primary mt-0.5 shrink-0" />}
                 <h3 className="text-base font-medium truncate flex-1">{note.title}</h3>
                 {(presence[note.id] || []).some((v) => v.userId !== currentUserId) && (
-                  <span className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0" title="Iemand bekijkt deze notitie nu" />
+                  <span className="w-2 h-2 mt-1.5 rounded-full bg-presence shrink-0" title="Iemand bekijkt deze notitie nu" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
