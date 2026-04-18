@@ -3,7 +3,8 @@ import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
-import { useNotes } from '@/hooks/useNotes';
+import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
+import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { PanelLeftOpen, ArrowLeft } from 'lucide-react';
@@ -18,20 +19,22 @@ const Index = () => {
   // Desktop: persistent sidebar visibility. Tablet/Mobile: overlay drawer.
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Mobile only: which pane is showing (list or editor)
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
-  // Notebook picker dialog (when creating a note without a notebook context)
   const [pickerOpen, setPickerOpen] = useState(false);
-  // Tracks the most recently created note so the editor opens it in edit mode.
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
+  // Picker for placing a shared note into one of MY notebooks
+  const [sharedPickerNoteId, setSharedPickerNoteId] = useState<string | null>(null);
+  const { user } = useMockAuth();
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
-    searchQuery, showArchived, showTrash, trashedCount,
+    searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
+    presence, remoteUpdate, dismissRemoteUpdate,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
 
   const noteCountByNotebook = useMemo(() => {
