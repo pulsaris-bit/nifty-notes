@@ -410,14 +410,15 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               rows={1}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."
-              readOnly={trashMode}
+              readOnly={trashMode || mode === 'view'}
             />
           </div>
           {/* Quill editor */}
           <QuillEditor
             value={displayContent}
             onChange={handleContentChange}
-            readOnly={trashMode}
+            readOnly={trashMode || mode === 'view'}
+            hideToolbar={mode === 'view'}
             placeholder="Begin met schrijven..."
           />
         </>
