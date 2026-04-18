@@ -341,19 +341,64 @@ export function useNotes() {
     return newNote.id;
   }, [activeNotebookId, activeLabelId, notebooks]);
 
+  // Flush a pending coalesced PATCH for one note immediately.
+  const flushPendingPatch = useCallback((id: string) => {
+    const entry = pendingPatchRef.current.get(id);
+    if (!entry) return;
+    window.clearTimeout(entry.timer);
+    pendingPatchRef.current.delete(id);
+    api(`/notes/${id}`, { method: 'PATCH', body: entry.updates })
+      .then(() => markClean(id))
+      .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+  }, []);
+
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date() } : n))
     );
     markDirty(id);
-    if (HAS_API) {
-      api(`/notes/${id}`, { method: 'PATCH', body: updates })
-        .then(() => markClean(id))
-        .catch((e) => { markClean(id); console.error('updateNote failed', e); });
-    } else {
-      markClean(id);
+    if (!HAS_API) { markClean(id); return; }
+
+    // Coalesce rapid title/content edits into one PATCH every ~400 ms.
+    // Other fields (pin, password, labels, archived) are sent immediately.
+    const keys = Object.keys(updates);
+    const onlyTextual = keys.length > 0 && keys.every((k) => k === 'title' || k === 'content');
+    if (onlyTextual) {
+      const existing = pendingPatchRef.current.get(id);
+      const merged = { ...(existing?.updates || {}), ...updates };
+      if (existing) window.clearTimeout(existing.timer);
+      const timer = window.setTimeout(() => {
+        pendingPatchRef.current.delete(id);
+        api(`/notes/${id}`, { method: 'PATCH', body: merged })
+          .then(() => markClean(id))
+          .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+      }, 400);
+      pendingPatchRef.current.set(id, { updates: merged, timer });
+      return;
     }
-  }, []);
+
+    // Non-textual change → flush any pending textual edits first, then send.
+    flushPendingPatch(id);
+    api(`/notes/${id}`, { method: 'PATCH', body: updates })
+      .then(() => markClean(id))
+      .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+  }, [flushPendingPatch]);
+
+  // Flush pending writes when switching active note or before unload.
+  useEffect(() => {
+    return () => {
+      const prevId = activeNoteIdRef.current;
+      if (prevId) flushPendingPatch(prevId);
+    };
+  }, [activeNoteId, flushPendingPatch]);
+
+  useEffect(() => {
+    const onUnload = () => {
+      for (const id of pendingPatchRef.current.keys()) flushPendingPatch(id);
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, [flushPendingPatch]);
 
   const archiveNote = useCallback((id: string) => {
     let nextArchived = false;
