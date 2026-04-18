@@ -61,9 +61,20 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    /* Prevent iOS Safari from scrolling the page when the contenteditable
+       editor receives focus — the app manages its own scroll containers. */
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    position: fixed;
+    inset: 0;
+    width: 100%;
   }
 
   h1, h2, h3 {
