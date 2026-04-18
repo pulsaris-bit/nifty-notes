@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
-import { subscribe, setPresence, clearPresenceForNote, listViewers, publish, removeDevicePresence, setPresenceRecipientsResolver } from '../lib/events.js';
+import { subscribe, setPresence, clearPresenceForNote, listViewers, publish, removeDevicePresence, setPresenceRecipientsResolver, getActiveEditor } from '../lib/events.js';
 import { recipientsForNote } from '../lib/notes.js';
 
 const router = Router();
@@ -43,10 +43,19 @@ async function broadcastPresence(noteId) {
   publish(recipients, { type: 'presence.changed', noteId, viewers: listViewers(noteId) });
 }
 
+async function denyIfAnotherEditor(noteId, userId, res) {
+  if (!noteId) return false;
+  const activeEditor = getActiveEditor(noteId, userId);
+  if (!activeEditor) return false;
+  res.status(409).json({ error: 'Note is being edited', activeEditor });
+  return true;
+}
+
 router.post('/presence', requireAuth, async (req, res) => {
   const parsed = presenceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { noteId, deviceId, mode } = parsed.data;
+  if (mode === 'edit' && await denyIfAnotherEditor(noteId, req.userId, res)) return;
 
   // Look up display name for the viewer.
   const { rows } = await pool.query(
@@ -77,6 +86,7 @@ router.post('/presence/ping', requireAuth, async (req, res) => {
   const parsed = presenceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { noteId, deviceId, mode } = parsed.data;
+  if (mode === 'edit' && await denyIfAnotherEditor(noteId, req.userId, res)) return;
   if (noteId) {
     const { rows } = await pool.query(
       `SELECT COALESCE(p.display_name, u.email) AS display_name
