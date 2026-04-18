@@ -32,6 +32,7 @@ interface NoteSidebarProps {
   onUpdateLabel: (id: string, updates: Partial<Pick<Label, 'name'>>) => void;
   onDeleteLabel: (id: string) => void;
   noteCountByNotebook: Record<string, number>;
+  noteCountByLabel?: Record<string, number>;
   onCollapse: () => void;
 }
 
@@ -40,7 +41,7 @@ export function NoteSidebar({
   onSelectNotebook, onSelectLabel, onToggleArchived, onToggleTrash,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
-  noteCountByNotebook, onCollapse,
+  noteCountByNotebook, noteCountByLabel = {}, onCollapse,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
@@ -78,6 +79,7 @@ export function NoteSidebar({
   };
 
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
+  const labelCount = (id: string) => noteCountByLabel[id] || 0;
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
   // Emoji picker rendered via a portal in fixed positioning so it can break out
@@ -297,6 +299,7 @@ export function NoteSidebar({
                     }`} onClick={() => { onSelectLabel(label.id); onSelectNotebook(null); }}>
                       <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
                       <span className="flex-1 truncate">{label.name}</span>
+                      <span className="text-xs opacity-60">{labelCount(label.id)}</span>
                       <button onClick={(e) => { e.stopPropagation(); setEditingLabelId(label.id); setEditLabelName(label.name); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-primary transition-opacity"><Pencil size={12} /></button>
                       <button onClick={(e) => { e.stopPropagation(); onDeleteLabel(label.id); }} className="opacity-0 group-hover:opacity-100 text-sidebar-custom-fg/50 hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
                     </div>
