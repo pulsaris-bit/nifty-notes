@@ -205,17 +205,10 @@
   cursor: pointer;
 }
 
-/* quill-table-better: give the toolbar button a recognizable label */
+/* quill-table-better: keep its toolbar button compact (icon only) */
 .quill-host .ql-snow .ql-toolbar button.ql-table-better,
 .quill-host .ql-snow.ql-toolbar button.ql-table-better {
-  width: auto;
-  padding: 0 6px;
-  font-size: 12px;
-  line-height: 22px;
-}
-.quill-host .ql-snow .ql-toolbar button.ql-table-better::before,
-.quill-host .ql-snow.ql-toolbar button.ql-table-better::before {
-  content: 'Tabel';
+  padding: 3px 5px;
 }
 /* Table styling inside the editor */
 .quill-host .ql-editor table {
