@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+import { getDiceBearAvatar } from '@/lib/avatar';
 import { toast } from 'sonner';
 
 const Profile = () => {
@@ -30,12 +31,7 @@ const Profile = () => {
     toast.success('Profiel bijgewerkt');
   };
 
-  const initials = user.displayName
-    .split(' ')
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const avatarSrc = user.avatarUrl || getDiceBearAvatar(user.email || user.displayName);
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-background px-4 py-8">
@@ -48,12 +44,8 @@ const Profile = () => {
         </Link>
 
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary grid place-items-center overflow-hidden border border-border">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="font-display text-xl">{initials}</span>
-            )}
+          <div className="w-16 h-16 rounded-full bg-primary/10 overflow-hidden border border-border">
+            <img src={avatarSrc} alt={user.displayName} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <h1 className="font-display text-2xl text-foreground truncate">{user.displayName}</h1>
