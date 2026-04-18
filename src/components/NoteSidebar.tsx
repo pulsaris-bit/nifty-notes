@@ -81,6 +81,8 @@ export function NoteSidebar({
 
   const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
   const labelCount = (id: string) => noteCountByLabel[id] || 0;
+  const sortedNotebooks = [...notebooks].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }));
+  const sortedLabels = [...labels].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }));
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
   // Emoji picker rendered via a portal in fixed positioning so it can break out
@@ -199,7 +201,7 @@ export function NoteSidebar({
           <AnimatePresence>
             {nbExpanded && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                {notebooks.map((nb) => (
+                {sortedNotebooks.map((nb) => (
                   editingNbId === nb.id ? (
                     <div key={nb.id} className="mx-2 mb-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
                       <div className="flex items-center gap-2">
@@ -282,7 +284,7 @@ export function NoteSidebar({
           <AnimatePresence>
             {labelsExpanded && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                {labels.map((label) => (
+                {sortedLabels.map((label) => (
                   editingLabelId === label.id ? (
                     <div key={label.id} className="mx-2 mb-1 flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
