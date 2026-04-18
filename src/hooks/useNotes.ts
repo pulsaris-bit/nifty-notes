@@ -455,7 +455,7 @@ export function useNotes() {
 
   // ---------- Sharing ----------
   const searchUsers = useCallback(async (q: string): Promise<UserSearchResult[]> => {
-    if (!HAS_API || q.trim().length < 2) return [];
+    if (!HAS_API) return [];
     try { return await api<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q.trim())}`); }
     catch { return []; }
   }, []);
