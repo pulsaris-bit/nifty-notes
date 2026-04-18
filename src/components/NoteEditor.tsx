@@ -320,7 +320,29 @@ export function NoteEditor({
                 <ArrowLeft size={18} />
               </button>
             )}
-            {notebook && <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>}
+            {notebook && isOwner && !trashMode ? (
+              <div className="relative flex items-center gap-1 truncate">
+                <span aria-hidden>{notebook.icon}</span>
+                <select
+                  value={note.notebookId}
+                  onChange={(e) => {
+                    const target = e.target.value;
+                    if (target && target !== note.notebookId) onUpdate(note.id, { notebookId: target });
+                  }}
+                  title="Verplaats naar ander notitieboek"
+                  aria-label="Notitieboek wijzigen"
+                  className="bg-transparent text-foreground/80 font-medium text-xs outline-none cursor-pointer hover:text-foreground focus:ring-1 focus:ring-ring rounded px-1 py-0.5 max-w-[12rem] truncate"
+                >
+                  {[...notebooks]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }))
+                    .map((nb) => (
+                      <option key={nb.id} value={nb.id}>{nb.icon} {nb.name}</option>
+                    ))}
+                </select>
+              </div>
+            ) : notebook && (
+              <span className="flex items-center gap-1 truncate text-foreground/80 font-medium">{notebook.icon} {notebook.name}</span>
+            )}
             {isShared && note.sharedBy && (
               <span className="flex items-center gap-1 truncate text-primary font-medium" title={`Gedeeld door ${note.sharedBy.displayName}`}>
                 <Share2 size={11} /> {note.sharedBy.displayName}
