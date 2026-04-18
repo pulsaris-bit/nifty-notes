@@ -181,6 +181,7 @@ const Index = () => {
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
+              isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -203,6 +204,7 @@ const Index = () => {
               onUpdate={updateNote} onDelete={deleteNote} onArchive={archiveNote}
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
+              isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
             />
           </div>
         </div>
@@ -225,6 +227,7 @@ const Index = () => {
               onToggleLabel={toggleNoteLabel} onCreateLabel={createLabel}
               onBack={() => setMobileView('list')}
               trashMode={showTrash} onRestore={restoreNote} onPurge={purgeNote}
+              isNewNote={!!activeNote && activeNote.id === lastCreatedNoteId}
             />
           )}
         </div>
