@@ -38,6 +38,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
+  // 'edit' = quill toolbar visible & editable; 'view' = read-only without toolbar.
+  const [mode, setMode] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   // noteId -> derived plain content (only kept in memory for this session)
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
 
@@ -49,10 +51,12 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     setLockError('');
     setUnlockInput('');
     setUnlockError('');
+    // New note → edit mode; existing note → view mode (no toolbar).
+    setMode(isNewNote ? 'edit' : 'view');
     // Re-lock any previously unlocked notes when switching notes:
     // leaving a note must require the password again on return.
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
-  }, [note?.id]);
+  }, [note?.id, isNewNote]);
 
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
