@@ -105,7 +105,9 @@ export function NoteList({
         ) : (
           sortedNotes.map((note) => {
             const encrypted = isEncrypted(note.content);
-            const previewDisplay = encrypted ? '••••••••' : (note.content || 'Lege notitie');
+            // Strip HTML tags + collapse whitespace for the list preview.
+            const plain = (note.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const previewDisplay = encrypted ? '••••••••' : (plain || 'Lege notitie');
             return (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
               className={`w-full text-left px-4 py-3 border-b border-border/60 transition-colors ${
