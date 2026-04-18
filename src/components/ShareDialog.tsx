@@ -26,35 +26,38 @@ export function ShareDialog({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load existing shares when dialog opens
+  // Load existing shares + initial user list when dialog opens
   useEffect(() => {
     if (!open) return;
-    setError(''); setQuery(''); setResults([]);
+    setError(''); setQuery('');
     listShares(noteId).then(setShares).catch(() => setShares([]));
-  }, [open, noteId, listShares]);
+    searchUsers('').then(setResults).catch(() => setResults([]));
+  }, [open, noteId, listShares, searchUsers]);
 
-  // Debounced user search
+  // Debounced user search (incl. empty query → all users)
   useEffect(() => {
     if (!open) return;
-    const q = query.trim();
-    if (q.length < 2) { setResults([]); return; }
     const t = window.setTimeout(async () => {
-      const res = await searchUsers(q);
-      // Filter out users that are already shared with
-      const existing = new Set(shares.map((s) => s.email.toLowerCase()));
-      setResults(res.filter((u) => !existing.has(u.email.toLowerCase())));
-    }, 250);
+      const res = await searchUsers(query.trim());
+      setResults(res);
+    }, query.trim() ? 250 : 0);
     return () => window.clearTimeout(t);
-  }, [query, open, searchUsers, shares]);
+  }, [query, open, searchUsers]);
+
+  const sharedIds = new Set(shares.map((s) => s.recipientId));
+  const visibleResults = results.filter((u) => !sharedIds.has(u.id));
 
   const handleAdd = async (email: string) => {
     setLoading(true); setError('');
     const r = await shareNote(noteId, email, permission);
     setLoading(false);
     if (r.error) { setError(r.error); return; }
-    setQuery(''); setResults([]);
+    setQuery('');
     const fresh = await listShares(noteId);
     setShares(fresh);
+    // Refresh user list so the just-shared user disappears
+    const users = await searchUsers('');
+    setResults(users);
   };
 
   const handlePermissionChange = async (recipientId: string, perm: 'read' | 'write') => {
@@ -79,14 +82,14 @@ export function ShareDialog({
 
         {/* Add new share */}
         <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Voeg iemand toe op e-mail</label>
+          <label className="text-xs text-muted-foreground">Voeg iemand toe</label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="naam@voorbeeld.nl"
+                placeholder="Zoek op naam of e-mail..."
                 style={{ fontSize: '16px' }}
                 className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
               />
@@ -101,14 +104,14 @@ export function ShareDialog({
             </select>
           </div>
 
-          {results.length > 0 && (
-            <div className="border border-border rounded-md max-h-40 overflow-y-auto">
-              {results.map((u) => (
+          <div className="border border-border rounded-md max-h-48 overflow-y-auto custom-scrollbar">
+            {visibleResults.length > 0 ? (
+              visibleResults.map((u) => (
                 <button
                   key={u.id}
                   onClick={() => handleAdd(u.email)}
                   disabled={loading}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left transition-colors border-b border-border/60 last:border-b-0"
                 >
                   <UserPlus size={14} className="text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -116,13 +119,18 @@ export function ShareDialog({
                     <div className="truncate text-xs text-muted-foreground">{u.email}</div>
                   </div>
                 </button>
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              <p className="px-3 py-3 text-xs text-muted-foreground">
+                {query.trim()
+                  ? 'Geen gebruikers gevonden.'
+                  : results.length === 0
+                    ? 'Nog geen andere gebruikers.'
+                    : 'Alle gebruikers hebben al toegang.'}
+              </p>
+            )}
+          </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
-          {query.trim().length >= 2 && results.length === 0 && (
-            <p className="text-xs text-muted-foreground">Geen gebruikers gevonden.</p>
-          )}
         </div>
 
         {/* Existing shares */}
