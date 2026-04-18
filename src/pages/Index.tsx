@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -105,6 +105,7 @@ const Index = () => {
       onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
       onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
       noteCountByNotebook={noteCountByNotebook}
+      noteCountByLabel={noteCountByLabel}
       onCollapse={() => {
         if (isDesktop) setDesktopSidebarVisible(false);
         else setDrawerOpen(false);
