@@ -18,7 +18,7 @@ interface NoteEditorProps {
   note: Note | null;
   notebooks: Notebook[];
   labels: Label[];
-  onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => void;
+  onUpdate: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password' | 'notebookId'>>) => void;
   onDelete: (id: string) => void;
   onArchive: (id: string) => void;
   onToggleLabel: (noteId: string, labelId: string) => void;
