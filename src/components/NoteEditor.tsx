@@ -39,6 +39,9 @@ interface NoteEditorProps {
   updateShare?: (noteId: string, recipientId: string, perm: 'read' | 'write') => Promise<void>;
   removeShare?: (noteId: string, recipientId: string) => Promise<void>;
   onPickSharedNotebook?: (noteId: string) => void;
+  // Sync helpers
+  onFlush?: (noteId: string) => void;
+  onRefetch?: (noteId: string) => void;
 }
 
 export function NoteEditor({
