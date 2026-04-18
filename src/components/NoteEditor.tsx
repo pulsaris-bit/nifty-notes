@@ -87,6 +87,35 @@ export function NoteEditor({
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
   }, [note?.id, isNewNote]);
 
+  // If another user opens the note while we are editing, force view-mode and flush.
+  useEffect(() => {
+    if (lockedByOthers && mode === 'edit' && note) {
+      onFlush?.(note.id);
+      setMode('view');
+    }
+  }, [lockedByOthers, mode, note, onFlush]);
+
+  // When switching from edit → view, flush pending PATCH and refetch so the
+  // read view immediately reflects the saved state.
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    if (!note) { prevModeRef.current = mode; return; }
+    if (prevModeRef.current === 'edit' && mode === 'view') {
+      onFlush?.(note.id);
+      const t = window.setTimeout(() => onRefetch?.(note.id), 250);
+      prevModeRef.current = mode;
+      return () => window.clearTimeout(t);
+    }
+    prevModeRef.current = mode;
+  }, [mode, note, onFlush, onRefetch]);
+
+  // Poll every 5s while in view-mode so remote changes show up even if SSE missed.
+  useEffect(() => {
+    if (!note || mode !== 'view' || trashMode) return;
+    const id = window.setInterval(() => { onRefetch?.(note.id); }, 5000);
+    return () => window.clearInterval(id);
+  }, [note, mode, trashMode, onRefetch]);
+
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
   const isUnlocked = !!unlockedEntry;
