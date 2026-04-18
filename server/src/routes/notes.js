@@ -28,6 +28,7 @@ const updateSchema = z.object({
   archived: z.boolean().optional(),
   password: z.string().max(200).nullable().optional(),
   labelIds: z.array(z.string().max(64)).optional(),
+  notebookId: z.string().min(1).max(64).optional(),
 });
 
 // Active notes (owned + shared with me, excludes trash)
@@ -129,6 +130,15 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
+    // Validate target notebook ownership when moving the note.
+    if (u.notebookId !== undefined) {
+      const { rowCount } = await pool.query(
+        'SELECT 1 FROM notebooks WHERE id = $1 AND user_id = $2',
+        [u.notebookId, req.userId],
+      );
+      if (rowCount === 0) return res.status(400).json({ error: 'Target notebook not found' });
+    }
+
     // If owner sets a password on a shared note → revoke all shares (encryption breaks sharing).
     let revokedShares = false;
     if (isOwner && u.password && !row.password) {
@@ -138,11 +148,12 @@ router.patch('/:id', async (req, res) => {
 
     await withTx(async (c) => {
       const fields = []; const values = []; let i = 1;
-      if (u.title !== undefined)    { fields.push(`title = $${i++}`);    values.push(u.title); }
-      if (u.content !== undefined)  { fields.push(`content = $${i++}`);  values.push(u.content); }
-      if (u.pinned !== undefined)   { fields.push(`pinned = $${i++}`);   values.push(u.pinned); }
-      if (u.archived !== undefined) { fields.push(`archived = $${i++}`); values.push(u.archived); }
-      if (u.password !== undefined) { fields.push(`password = $${i++}`); values.push(u.password); }
+      if (u.title !== undefined)      { fields.push(`title = $${i++}`);       values.push(u.title); }
+      if (u.content !== undefined)    { fields.push(`content = $${i++}`);     values.push(u.content); }
+      if (u.pinned !== undefined)     { fields.push(`pinned = $${i++}`);      values.push(u.pinned); }
+      if (u.archived !== undefined)   { fields.push(`archived = $${i++}`);    values.push(u.archived); }
+      if (u.password !== undefined)   { fields.push(`password = $${i++}`);    values.push(u.password); }
+      if (u.notebookId !== undefined) { fields.push(`notebook_id = $${i++}`); values.push(u.notebookId); }
       if (fields.length > 0) {
         fields.push(`updated_at = now()`);
         values.push(req.params.id);

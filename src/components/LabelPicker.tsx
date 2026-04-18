@@ -53,7 +53,7 @@ export function LabelPicker({
         <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-2">
           <div className="px-3 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Labels</div>
           <div className="max-h-48 overflow-y-auto custom-scrollbar">
-            {labels.map((label) => {
+            {[...labels].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })).map((label) => {
               const isActive = activeLabelIds.includes(label.id);
               return (
                 <button
