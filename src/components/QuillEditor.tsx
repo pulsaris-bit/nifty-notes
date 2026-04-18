@@ -17,6 +17,8 @@ interface QuillEditorProps {
   onChange: (html: string) => void;
   readOnly?: boolean;
   placeholder?: string;
+  /** When true, the Quill toolbar is hidden entirely (used in view mode). */
+  hideToolbar?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface QuillEditorProps {
  * The toolbar auto-hides when the user scrolls the editor content and reappears
  * on click/focus inside the editable area.
  */
-export function QuillEditor({ value, onChange, readOnly = false, placeholder }: QuillEditorProps) {
+export function QuillEditor({ value, onChange, readOnly = false, placeholder, hideToolbar = false }: QuillEditorProps) {
   ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
