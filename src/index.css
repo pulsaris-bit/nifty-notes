@@ -146,16 +146,28 @@
   background: hsl(var(--background));
 }
 .quill-host .ql-editor {
-  padding: 24px max(24px, 4vw);
+  padding-top: 24px;
+  padding-bottom: 24px;
+  padding-left: max(24px, 4vw);
+  /* Add the iOS safe-area inset on the right so content never runs under the
+     notch / rounded corner in landscape, and so the right margin visually
+     matches the left in portrait too. */
+  padding-right: calc(max(24px, 4vw) + env(safe-area-inset-right, 0px));
   width: 100%;
   min-height: 100%;
   line-height: 1.65;
+  box-sizing: border-box;
+}
+.quill-host .ql-container.ql-snow {
+  /* Prevent any horizontal overflow caused by wide inline content (long URLs,
+     tables) from eating into the right padding on iOS Safari. */
+  overflow-x: hidden;
 }
 .quill-host .ql-editor.ql-blank::before {
   color: hsl(var(--muted-foreground) / 0.6);
   font-style: normal;
   left: max(24px, 4vw);
-  right: max(24px, 4vw);
+  right: calc(max(24px, 4vw) + env(safe-area-inset-right, 0px));
 }
 .quill-host .ql-editor h1,
 .quill-host .ql-editor h2,
