@@ -380,7 +380,7 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
       ) : (
         <>
           {/* Title */}
-          <div className="px-8 pt-6 pb-2 max-w-3xl mx-auto w-full">
+          <div className="pt-6 pb-2 w-full" style={{ paddingLeft: 'max(24px, 4vw)', paddingRight: 'max(24px, 4vw)' }}>
             <input
               value={note.title}
               onChange={(e) => onUpdate(note.id, { title: e.target.value })}
