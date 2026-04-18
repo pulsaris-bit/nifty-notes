@@ -39,6 +39,9 @@ interface NoteEditorProps {
   updateShare?: (noteId: string, recipientId: string, perm: 'read' | 'write') => Promise<void>;
   removeShare?: (noteId: string, recipientId: string) => Promise<void>;
   onPickSharedNotebook?: (noteId: string) => void;
+  // Sync helpers
+  onFlush?: (noteId: string) => void;
+  onRefetch?: (noteId: string) => void;
 }
 
 export function NoteEditor({
@@ -46,6 +49,7 @@ export function NoteEditor({
   onBack, trashMode = false, onRestore, onPurge, isNewNote = false,
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
+  onFlush, onRefetch,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -61,7 +65,10 @@ export function NoteEditor({
 
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;
-  const isReadOnly = trashMode || (isShared && note?.permission === 'read');
+  // Other users currently viewing this note (excluding ourselves).
+  const otherViewers = viewers.filter((v) => v.userId && v.userId !== currentUserId);
+  const lockedByOthers = otherViewers.length > 0;
+  const isReadOnly = trashMode || (isShared && note?.permission === 'read') || lockedByOthers;
   const isOwner = !isShared;
 
   useEffect(() => {
@@ -79,6 +86,35 @@ export function NoteEditor({
     // leaving a note must require the password again on return.
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
   }, [note?.id, isNewNote]);
+
+  // If another user opens the note while we are editing, force view-mode and flush.
+  useEffect(() => {
+    if (lockedByOthers && mode === 'edit' && note) {
+      onFlush?.(note.id);
+      setMode('view');
+    }
+  }, [lockedByOthers, mode, note, onFlush]);
+
+  // When switching from edit → view, flush pending PATCH and refetch so the
+  // read view immediately reflects the saved state.
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    if (!note) { prevModeRef.current = mode; return; }
+    if (prevModeRef.current === 'edit' && mode === 'view') {
+      onFlush?.(note.id);
+      const t = window.setTimeout(() => onRefetch?.(note.id), 250);
+      prevModeRef.current = mode;
+      return () => window.clearTimeout(t);
+    }
+    prevModeRef.current = mode;
+  }, [mode, note, onFlush, onRefetch]);
+
+  // Poll every 5s while in view-mode so remote changes show up even if SSE missed.
+  useEffect(() => {
+    if (!note || mode !== 'view' || trashMode) return;
+    const id = window.setInterval(() => { onRefetch?.(note.id); }, 5000);
+    return () => window.clearInterval(id);
+  }, [note, mode, trashMode, onRefetch]);
 
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
@@ -286,9 +322,10 @@ export function NoteEditor({
           <PresenceAvatars viewers={viewers} currentUserId={currentUserId} />
           {!trashMode && !showLockedView && (
             <button
-              onClick={() => setMode((m) => (m === 'edit' ? 'view' : 'edit'))}
-              className={`p-1.5 rounded-md transition-colors ${mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              title={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
+              onClick={() => { if (!lockedByOthers) setMode((m) => (m === 'edit' ? 'view' : 'edit')); }}
+              disabled={lockedByOthers}
+              className={`p-1.5 rounded-md transition-colors ${lockedByOthers ? 'opacity-40 cursor-not-allowed text-muted-foreground' : mode === 'edit' ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              title={lockedByOthers ? `Wordt bekeken door ${otherViewers[0]?.displayName ?? 'een andere gebruiker'} — bewerken geblokkeerd` : mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
               aria-label={mode === 'edit' ? 'Naar weergavemodus' : 'Naar bewerkmodus'}
             >
               {mode === 'edit' ? <Eye size={16} /> : <Pencil size={16} />}

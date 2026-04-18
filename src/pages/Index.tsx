@@ -35,6 +35,7 @@ const Index = () => {
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
 
@@ -189,6 +190,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -220,6 +222,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           </div>
         </div>
@@ -251,6 +254,7 @@ const Index = () => {
               searchUsers={searchUsers} listShares={listShares}
               shareNote={shareNote} updateShare={updateShare} removeShare={removeShare}
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
+              onFlush={flushPendingPatch} onRefetch={refetchNote}
             />
           )}
         </div>
