@@ -204,3 +204,31 @@
 .quill-host .ql-editor ul[data-checked=false] > li::before {
   cursor: pointer;
 }
+
+/* quill-table-better: give the toolbar button a recognizable label */
+.quill-host .ql-snow .ql-toolbar button.ql-table-better,
+.quill-host .ql-snow.ql-toolbar button.ql-table-better {
+  width: auto;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 22px;
+}
+.quill-host .ql-snow .ql-toolbar button.ql-table-better::before,
+.quill-host .ql-snow.ql-toolbar button.ql-table-better::before {
+  content: 'Tabel';
+}
+/* Table styling inside the editor */
+.quill-host .ql-editor table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+.quill-host .ql-editor table td,
+.quill-host .ql-editor table th {
+  border: 1px solid hsl(var(--border));
+  padding: 6px 10px;
+  min-width: 40px;
+}
+.quill-host .ql-editor table th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
