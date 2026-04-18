@@ -3,6 +3,8 @@ import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import QuillTableBetter from 'quill-table-better';
 import 'quill-table-better/dist/quill-table-better.css';
+import { API_URL, getToken, getDeviceId, HAS_API } from '@/lib/api';
+import { toast } from 'sonner';
 
 // Register the table module exactly once (HMR-safe).
 let tableRegistered = false;
@@ -38,23 +40,74 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
 
+  const imageHandler = useMemo(
+    () => () => {
+      const editor = ref.current?.getEditor();
+      if (!editor) return;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+          let url: string;
+          if (HAS_API && API_URL) {
+            const fd = new FormData();
+            fd.append('file', file);
+            const headers: Record<string, string> = { 'X-Device-Id': getDeviceId() };
+            const token = getToken();
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_URL}/uploads`, { method: 'POST', headers, body: fd });
+            if (!res.ok) {
+              const text = await res.text();
+              throw new Error(text || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            url = data.url as string;
+          } else {
+            // Fallback (mock mode): inline as data URL so the image still works.
+            url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(file);
+            });
+          }
+          const range = editor.getSelection(true);
+          const index = range?.index ?? editor.getLength();
+          editor.insertEmbed(index, 'image', url, 'user');
+          editor.setSelection({ index: index + 1, length: 0 });
+        } catch (e) {
+          console.error('image upload failed', e);
+          toast.error(e instanceof Error ? e.message : 'Afbeelding uploaden mislukt');
+        }
+      };
+      input.click();
+    },
+    [],
+  );
+
   const modules = useMemo(
     () => ({
       // The native table module must be disabled when using table-better.
       table: false,
-      toolbar: [
-        [{ header: [1, 2, 3, 4, 5, false] }, { font: [] }],
-        [{ size: ['small', false, 'large', 'huge'] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
-        [{ indent: '-1' }, { indent: '+1' }, { align: [] }],
-        ['blockquote', 'code-block'],
-        ['link', 'image', 'video'],
-        [{ script: 'sub' }, { script: 'super' }],
-        ['table-better'],
-        ['clean'],
-      ],
+      toolbar: {
+        container: [
+          [{ header: [1, 2, 3, 4, 5, false] }, { font: [] }],
+          [{ size: ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ color: [] }, { background: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
+          [{ indent: '-1' }, { indent: '+1' }, { align: [] }],
+          ['blockquote', 'code-block'],
+          ['link', 'image', 'video'],
+          [{ script: 'sub' }, { script: 'super' }],
+          ['table-better'],
+          ['clean'],
+        ],
+        handlers: { image: imageHandler },
+      },
       'table-better': {
         language: 'en_US',
         menus: ['column', 'row', 'merge', 'table', 'cell', 'wrap', 'copy', 'delete'],
@@ -65,7 +118,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       },
       clipboard: { matchVisual: false },
     }),
-    [],
+    [imageHandler],
   );
 
   const formats = useMemo(
