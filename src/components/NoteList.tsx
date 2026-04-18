@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, Plus, Pin, Lock, ArrowUpDown, PanelLeftOpen } from 'lucide-react';
-import { Note, Notebook, Label } from '@/types/notes';
+import { Search, Plus, Pin, Lock, ArrowUpDown, PanelLeftOpen, Share2 } from 'lucide-react';
+import { Note, Notebook, Label, PresenceViewer } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { isEncrypted } from '@/lib/noteCrypto';
@@ -18,13 +18,14 @@ interface NoteListProps {
   onCreateNote: () => void;
   showSidebarToggle?: boolean;
   onOpenSidebar?: () => void;
-  /** When true, show trash UI: no "new note" button, list ordered by deletedAt. */
   trashMode?: boolean;
+  presence?: Record<string, PresenceViewer[]>;
+  currentUserId?: string;
 }
 
 export function NoteList({
   notes, notebooks, labels, activeNoteId, searchQuery, onSearch, onSelectNote, onCreateNote,
-  showSidebarToggle, onOpenSidebar, trashMode = false,
+  showSidebarToggle, onOpenSidebar, trashMode = false, presence = {}, currentUserId,
 }: NoteListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('updatedAt');
   const getNotebookName = (id: string) => notebooks.find((nb) => nb.id === id)?.name || '';
@@ -122,7 +123,11 @@ export function NoteList({
               <div className="flex items-start gap-1.5">
                 {note.pinned && <Pin size={12} className="text-primary mt-0.5 shrink-0" />}
                 {note.password && <Lock size={12} className="text-muted-foreground mt-0.5 shrink-0" />}
+                {note.sharedBy && <Share2 size={12} className="text-primary mt-0.5 shrink-0" />}
                 <h3 className="text-base font-medium truncate flex-1">{note.title}</h3>
+                {(presence[note.id] || []).some((v) => v.userId !== currentUserId) && (
+                  <span className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0" title="Iemand bekijkt deze notitie nu" />
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                 {previewDisplay}

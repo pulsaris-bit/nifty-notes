@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Note, Notebook, Label, TRASH_RETENTION_DAYS } from '@/types/notes';
-import { HAS_API, api } from '@/lib/api';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
+import { HAS_API, api, eventStreamUrl, getDeviceId } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
 const LABEL_COLORS = [
@@ -32,24 +32,12 @@ const defaultNotes: Note[] = [
     content: 'Dit is je persoonlijke notitie-app. Maak notebooks aan, schrijf notities en houd alles overzichtelijk.\n\nProbeer het uit door een nieuwe notitie aan te maken!',
     notebookId: 'nb-1', labelIds: ['lb-2'], createdAt: new Date(2024, 2, 15), updatedAt: new Date(2024, 2, 15), pinned: true, password: null, archived: false, deletedAt: null,
   },
-  {
-    id: 'n-2', title: 'Vergadering maandag',
-    content: 'Agenda:\n- Q2 planning bespreken\n- Nieuwe projecten toewijzen\n- Teamuitje organiseren',
-    notebookId: 'nb-2', labelIds: ['lb-1', 'lb-2'], createdAt: new Date(2024, 2, 14), updatedAt: new Date(2024, 2, 14), pinned: false, password: null, archived: false, deletedAt: null,
-  },
-  {
-    id: 'n-3', title: 'App idee: Receptenplanner',
-    content: 'Een app waarmee je weekmenu\'s kunt plannen en automatisch boodschappenlijstjes genereert.',
-    notebookId: 'nb-3', labelIds: ['lb-3'], createdAt: new Date(2024, 2, 13), updatedAt: new Date(2024, 2, 13), pinned: false, password: null, archived: false, deletedAt: null,
-  },
-  {
-    id: 'n-4', title: 'Boodschappenlijst',
-    content: '- Melk\n- Brood\n- Kaas\n- Appels\n- Pasta\n- Tomatensaus',
-    notebookId: 'nb-1', labelIds: [], createdAt: new Date(2024, 2, 12), updatedAt: new Date(2024, 2, 12), pinned: false, password: null, archived: false, deletedAt: null,
-  },
 ];
 
-// API row → client Note
+/** Sentinel notebook id used to display shared-with-me notes that haven't been
+ *  assigned to one of the recipient's own notebooks yet. */
+export const SHARED_INBOX_ID = '__shared__';
+
 function mapApiNote(r: any): Note {
   return {
     id: r.id,
@@ -63,22 +51,27 @@ function mapApiNote(r: any): Note {
     createdAt: new Date(r.createdAt),
     updatedAt: new Date(r.updatedAt),
     deletedAt: r.deletedAt ? new Date(r.deletedAt) : null,
+    permission: r.permission ?? 'owner',
+    sharedBy: r.sharedBy ?? null,
   };
 }
 
 const RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
-/** Drop notes whose deletedAt is older than the retention window (mock-mode purge). */
 function purgeMockTrash(notes: Note[]): Note[] {
   const cutoff = Date.now() - RETENTION_MS;
   return notes.filter((n) => !n.deletedAt || n.deletedAt.getTime() >= cutoff);
+}
+
+export interface RemoteUpdateBanner {
+  noteId: string;
+  by: string | null;
 }
 
 export function useNotes() {
   const { user } = useMockAuth();
 
   const [notebooks, setNotebooks] = useState<Notebook[]>(HAS_API ? [] : defaultNotebooks);
-  // notes contains BOTH active and trashed notes — filtering happens in selectors below.
   const [notes, setNotes] = useState<Note[]>(HAS_API ? [] : purgeMockTrash(defaultNotes));
   const [labels, setLabels] = useState<Label[]>(HAS_API ? [] : defaultLabels);
   const [activeNotebookId, setActiveNotebookId] = useState<string | null>(null);
@@ -88,13 +81,36 @@ export function useNotes() {
   const [showArchived, setShowArchived] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
 
-  // ---------- Initial load from API ----------
+  // Realtime: presence per note + remote-update banner for active note
+  const [presence, setPresence] = useState<Record<string, PresenceViewer[]>>({});
+  const [remoteUpdate, setRemoteUpdate] = useState<RemoteUpdateBanner | null>(null);
+
+  const activeNoteIdRef = useRef<string | null>(null);
+  useEffect(() => { activeNoteIdRef.current = activeNoteId; }, [activeNoteId]);
+
+  // Track per-note pending-write flag so we know to show the banner instead of stomping content.
+  const dirtyNotesRef = useRef<Set<string>>(new Set());
+  const markDirty = (id: string) => { dirtyNotesRef.current.add(id); };
+  const markClean = (id: string) => { dirtyNotesRef.current.delete(id); };
+
+  // ---------- Initial load ----------
+  const loadAll = useCallback(async () => {
+    const [nbs, lbs, ns, trashed] = await Promise.all([
+      api<any[]>('/notebooks'),
+      api<any[]>('/labels'),
+      api<any[]>('/notes'),
+      api<any[]>('/notes/trash'),
+    ]);
+    setNotebooks(nbs.map((n) => ({ id: n.id, name: n.name, icon: n.icon, color: n.color })));
+    setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
+    setNotes([...ns.map(mapApiNote), ...trashed.map(mapApiNote)]);
+  }, []);
+
   useEffect(() => {
     if (!HAS_API || !user) return;
     let cancelled = false;
     (async () => {
       try {
-        // Fire purge first (server also auto-purges, but this keeps it explicit on app start)
         api('/notes/trash/purge', { method: 'POST' }).catch(() => undefined);
 
         const [nbs, lbs, ns, trashed] = await Promise.all([
@@ -105,7 +121,6 @@ export function useNotes() {
         ]);
         if (cancelled) return;
 
-        // First-time bootstrap: seed defaults so the app isn't empty.
         if (nbs.length === 0) {
           for (const nb of defaultNotebooks) {
             await api('/notebooks', { method: 'POST', body: nb });
@@ -122,25 +137,7 @@ export function useNotes() {
         } else {
           setLabels(lbs.map((l) => ({ id: l.id, name: l.name, color: l.color })));
         }
-        let allNotes = [...ns.map(mapApiNote), ...trashed.map(mapApiNote)];
-
-        // --- One-time content wipe for the WYSIWYG (Quill) migration ---
-        // The editor switched from Markdown to HTML. To avoid mixed/garbled
-        // formatting, existing note bodies are cleared exactly once per user/device.
-        // Password-protected notes are skipped (their content is encrypted).
-        const WIPE_FLAG = 'quill-content-wiped-v2';
-        if (typeof window !== 'undefined' && !window.localStorage.getItem(WIPE_FLAG)) {
-          const toWipe = allNotes.filter((n) => n.content && !n.password);
-          for (const n of toWipe) {
-            api(`/notes/${n.id}`, { method: 'PATCH', body: { content: '' } }).catch((e) =>
-              console.error('content wipe failed', e),
-            );
-          }
-          allNotes = allNotes.map((n) => (n.password ? n : { ...n, content: '' }));
-          window.localStorage.setItem(WIPE_FLAG, '1');
-        }
-
-        setNotes(allNotes);
+        setNotes([...ns.map(mapApiNote), ...trashed.map(mapApiNote)]);
       } catch (e) {
         console.error('Failed to load data from API', e);
       }
@@ -148,7 +145,7 @@ export function useNotes() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Mock-mode purge on mount (HAS_API path is purged via API)
+  // Mock-mode purge on mount
   useEffect(() => {
     if (HAS_API) return;
     setNotes((prev) => {
@@ -157,12 +154,105 @@ export function useNotes() {
     });
   }, []);
 
+  // ---------- SSE realtime ----------
+  useEffect(() => {
+    if (!HAS_API || !user) return;
+    const url = eventStreamUrl();
+    if (!url) return;
+    const myDeviceId = getDeviceId();
+    const es = new EventSource(url);
+
+    const refetchNote = async (noteId: string) => {
+      try {
+        const fresh = await api<any[]>('/notes');
+        const found = fresh.find((n) => n.id === noteId);
+        setNotes((prev) => {
+          if (!found) return prev.filter((n) => n.id !== noteId);
+          const mapped = mapApiNote(found);
+          const exists = prev.some((n) => n.id === noteId);
+          if (exists) return prev.map((n) => (n.id === noteId ? { ...n, ...mapped } : n));
+          return [mapped, ...prev];
+        });
+      } catch { /* ignore */ }
+    };
+
+    es.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'presence.changed') {
+          setPresence((prev) => ({ ...prev, [msg.noteId]: msg.viewers || [] }));
+          return;
+        }
+        // Ignore echoes from this device
+        if (msg.originDeviceId && msg.originDeviceId === myDeviceId) return;
+
+        if (msg.type === 'note.updated' && msg.noteId) {
+          // If the user is actively editing this note, don't stomp it: show banner instead.
+          const isActive = activeNoteIdRef.current === msg.noteId;
+          const isDirty = dirtyNotesRef.current.has(msg.noteId);
+          if (isActive && isDirty) {
+            const viewers = presence[msg.noteId] || [];
+            setRemoteUpdate({
+              noteId: msg.noteId,
+              by: viewers.find((v) => v.userId)?.displayName || null,
+            });
+          } else {
+            void refetchNote(msg.noteId);
+          }
+        } else if (msg.type === 'note.created' && msg.noteId) {
+          void refetchNote(msg.noteId);
+        } else if (msg.type === 'note.deleted' && msg.noteId) {
+          setNotes((prev) => prev.filter((n) => n.id !== msg.noteId));
+          if (activeNoteIdRef.current === msg.noteId) setActiveNoteId(null);
+        } else if (msg.type === 'share.changed') {
+          // Share lists changed; reload all notes to reflect new sharedBy/permission.
+          void loadAll().catch(() => undefined);
+        }
+      } catch { /* ignore */ }
+    };
+
+    es.onerror = () => { /* EventSource auto-reconnects */ };
+
+    return () => es.close();
+  }, [user, loadAll, presence]);
+
+  // ---------- Presence: announce active note + heartbeat ----------
+  useEffect(() => {
+    if (!HAS_API || !user) return;
+    const deviceId = getDeviceId();
+    api('/events/presence', { method: 'POST', body: { noteId: activeNoteId, deviceId } })
+      .catch(() => undefined);
+    if (!activeNoteId) return;
+
+    const heartbeat = window.setInterval(() => {
+      api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId } })
+        .catch(() => undefined);
+    }, 20_000);
+    return () => window.clearInterval(heartbeat);
+  }, [activeNoteId, user]);
+
+  // Notify on tab close (best-effort).
+  useEffect(() => {
+    if (!HAS_API) return;
+    const onUnload = () => {
+      try {
+        const url = `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')}/events/presence`;
+        const token = localStorage.getItem('api_auth_token');
+        if (!url || !token) return;
+        const blob = new Blob([JSON.stringify({ noteId: null, deviceId: getDeviceId() })], { type: 'application/json' });
+        navigator.sendBeacon?.(url + `?token=${encodeURIComponent(token)}`, blob);
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
+
+  // ---------- Selectors ----------
   const activeNotes = notes.filter((n) => !n.deletedAt);
-  const trashedNotes = notes.filter((n) => !!n.deletedAt);
+  const trashedNotes = notes.filter((n) => !!n.deletedAt && n.permission === 'owner');
 
   const filteredNotes = (showTrash ? trashedNotes : activeNotes).filter((note) => {
     if (showTrash) {
-      // In trash, only apply the search filter
       if (!searchQuery) return true;
       return (
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -182,7 +272,6 @@ export function useNotes() {
 
   const sortedNotes = [...filteredNotes].sort((a, b) => {
     if (showTrash) {
-      // Most recently deleted first
       return (b.deletedAt?.getTime() ?? 0) - (a.deletedAt?.getTime() ?? 0);
     }
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -191,12 +280,17 @@ export function useNotes() {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) || null;
 
+  // Count of notes that are shared with me but have no chosen notebook yet.
+  const sharedInboxCount = activeNotes.filter((n) => n.permission !== 'owner' && n.notebookId === SHARED_INBOX_ID).length;
+
   const createNote = useCallback((notebookId?: string) => {
     const targetNotebookId = notebookId || activeNotebookId;
-    if (!targetNotebookId) {
-      // No notebook context — caller must pick one via the dialog.
+    if (!targetNotebookId || targetNotebookId === SHARED_INBOX_ID) {
       return null;
     }
+    // Only create in own notebooks
+    const ownNotebook = notebooks.find((nb) => nb.id === targetNotebookId);
+    if (!ownNotebook) return null;
     const newNote: Note = {
       id: `n-${Date.now()}`,
       title: 'Nieuwe notitie',
@@ -209,6 +303,8 @@ export function useNotes() {
       password: null,
       archived: false,
       deletedAt: null,
+      permission: 'owner',
+      sharedBy: null,
     };
     setNotes((prev) => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
@@ -219,14 +315,19 @@ export function useNotes() {
       }}).catch((e) => console.error('createNote failed', e));
     }
     return newNote.id;
-  }, [activeNotebookId, activeLabelId]);
+  }, [activeNotebookId, activeLabelId, notebooks]);
 
   const updateNote = useCallback((id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'pinned' | 'labelIds' | 'password'>>) => {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date() } : n))
     );
+    markDirty(id);
     if (HAS_API) {
-      api(`/notes/${id}`, { method: 'PATCH', body: updates }).catch((e) => console.error('updateNote failed', e));
+      api(`/notes/${id}`, { method: 'PATCH', body: updates })
+        .then(() => markClean(id))
+        .catch((e) => { markClean(id); console.error('updateNote failed', e); });
+    } else {
+      markClean(id);
     }
   }, []);
 
@@ -244,17 +345,26 @@ export function useNotes() {
     }
   }, []);
 
-  // Soft-delete: move to trash (sets deletedAt). DELETE on the server soft-deletes.
   const deleteNote = useCallback((id: string) => {
+    const note = notes.find((n) => n.id === id);
+    // Recipients can't trash; they "leave" the share.
+    if (note && note.permission && note.permission !== 'owner') {
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      if (activeNoteId === id) setActiveNoteId(null);
+      if (HAS_API) {
+        api(`/notes/shared-with-me/${id}`, { method: 'DELETE' })
+          .catch((e) => console.error('leaveSharedNote failed', e));
+      }
+      return;
+    }
     const now = new Date();
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, deletedAt: now } : n)));
     if (activeNoteId === id) setActiveNoteId(null);
     if (HAS_API) {
       api(`/notes/${id}`, { method: 'DELETE' }).catch((e) => console.error('deleteNote failed', e));
     }
-  }, [activeNoteId]);
+  }, [activeNoteId, notes]);
 
-  // Restore from trash
   const restoreNote = useCallback((id: string) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, deletedAt: null } : n)));
     if (HAS_API) {
@@ -262,7 +372,6 @@ export function useNotes() {
     }
   }, []);
 
-  // Permanent delete (only meaningful from the trash)
   const purgeNote = useCallback((id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     if (activeNoteId === id) setActiveNoteId(null);
@@ -344,13 +453,76 @@ export function useNotes() {
     }
   }, []);
 
+  // ---------- Sharing ----------
+  const searchUsers = useCallback(async (q: string): Promise<UserSearchResult[]> => {
+    if (!HAS_API || q.trim().length < 2) return [];
+    try { return await api<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q.trim())}`); }
+    catch { return []; }
+  }, []);
+
+  const listShares = useCallback(async (noteId: string): Promise<NoteShare[]> => {
+    if (!HAS_API) return [];
+    try { return await api<NoteShare[]>(`/notes/${noteId}/shares`); }
+    catch { return []; }
+  }, []);
+
+  const shareNote = useCallback(async (noteId: string, recipientEmail: string, permission: 'read' | 'write') => {
+    if (!HAS_API) return { error: 'Server vereist' };
+    try {
+      await api(`/notes/${noteId}/shares`, { method: 'POST', body: { recipientEmail, permission } });
+      return {};
+    } catch (e: any) { return { error: e?.message || 'Delen mislukt' }; }
+  }, []);
+
+  const updateShare = useCallback(async (noteId: string, recipientId: string, permission: 'read' | 'write') => {
+    if (!HAS_API) return;
+    await api(`/notes/${noteId}/shares/${recipientId}`, { method: 'PATCH', body: { permission } });
+  }, []);
+
+  const removeShare = useCallback(async (noteId: string, recipientId: string) => {
+    if (!HAS_API) return;
+    await api(`/notes/${noteId}/shares/${recipientId}`, { method: 'DELETE' });
+  }, []);
+
+  const setSharedNoteNotebook = useCallback(async (noteId: string, targetNotebookId: string | null) => {
+    if (!HAS_API) return;
+    setNotes((prev) => prev.map((n) =>
+      n.id === noteId ? { ...n, notebookId: targetNotebookId || SHARED_INBOX_ID } : n,
+    ));
+    try {
+      await api(`/notes/shared-with-me/${noteId}`, { method: 'PATCH', body: { targetNotebookId } });
+    } catch (e) { console.error('setSharedNoteNotebook failed', e); }
+  }, []);
+
+  const dismissRemoteUpdate = useCallback(async (refresh: boolean) => {
+    const noteId = remoteUpdate?.noteId;
+    setRemoteUpdate(null);
+    if (refresh && noteId) {
+      try {
+        const fresh = await api<any[]>('/notes');
+        const found = fresh.find((n) => n.id === noteId);
+        if (found) {
+          const mapped = mapApiNote(found);
+          setNotes((prev) => prev.map((n) => (n.id === noteId ? mapped : n)));
+          markClean(noteId);
+        }
+      } catch { /* ignore */ }
+    }
+  }, [remoteUpdate]);
+
   return {
     notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash,
     trashedCount: trashedNotes.length,
+    sharedInboxCount,
+    presence,
+    remoteUpdate,
+    dismissRemoteUpdate,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    // sharing
+    searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   };
 }

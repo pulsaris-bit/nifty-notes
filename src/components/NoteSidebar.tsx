@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, LogOut, Shield, User as UserIcon } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, LogOut, Shield, User as UserIcon, Share2 } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMockAuth } from '@/hooks/useMockAuth';
@@ -20,6 +20,7 @@ interface NoteSidebarProps {
   showArchived: boolean;
   showTrash: boolean;
   trashedCount: number;
+  sharedInboxCount?: number;
   onSelectNotebook: (id: string | null) => void;
   onSelectLabel: (id: string | null) => void;
   onToggleArchived: () => void;
@@ -35,7 +36,7 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  notebooks, labels, activeNotebookId, activeLabelId, showArchived, showTrash, trashedCount,
+  notebooks, labels, activeNotebookId, activeLabelId, showArchived, showTrash, trashedCount, sharedInboxCount = 0,
   onSelectNotebook, onSelectLabel, onToggleArchived, onToggleTrash,
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
@@ -167,6 +168,14 @@ export function NoteSidebar({
           showArchived ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
         }`}>
         <Archive size={16} /><span className="flex-1 text-left">Archief</span>
+      </button>
+
+      <button onClick={() => onSelectNotebook('__shared__')}
+        className={`mx-2 px-3 py-2 rounded-md text-sm flex items-center gap-2.5 transition-colors ${
+          activeNotebookId === '__shared__' ? 'bg-sidebar-custom-accent text-sidebar-custom-fg-active' : 'text-sidebar-custom-fg hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-accent/50'
+        }`}>
+        <Share2 size={16} /><span className="flex-1 text-left">Gedeeld met mij</span>
+        {sharedInboxCount > 0 && <span className="text-xs opacity-60">{sharedInboxCount}</span>}
       </button>
 
       <button onClick={onToggleTrash}
