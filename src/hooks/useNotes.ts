@@ -141,14 +141,8 @@ export function useNotes() {
         ]);
         if (cancelled) return;
 
-        if (nbs.length === 0) {
-          for (const nb of defaultNotebooks) {
-            await api('/notebooks', { method: 'POST', body: nb });
-          }
-          setNotebooks(defaultNotebooks);
-        } else {
-          setNotebooks(nbs.map((n) => ({ id: n.id, name: n.name, icon: n.icon, color: n.color })));
-        }
+        // New users start with NO notebooks — they must create their first one themselves.
+        setNotebooks(nbs.map((n) => ({ id: n.id, name: n.name, icon: n.icon, color: n.color })));
         if (lbs.length === 0) {
           for (const lb of defaultLabels) {
             await api('/labels', { method: 'POST', body: lb });
