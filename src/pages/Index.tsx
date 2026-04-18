@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -29,6 +29,7 @@ const Index = () => {
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, trashedCount, sharedInboxCount,
+    noteCountByNotebook, noteCountByLabel,
     presence, remoteUpdate, dismissRemoteUpdate,
     setActiveNotebookId, setActiveNoteId, setActiveLabelId, setSearchQuery, setShowArchived, setShowTrash,
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
@@ -36,12 +37,6 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
-
-  const noteCountByNotebook = useMemo(() => {
-    const counts: Record<string, number> = {};
-    notes.forEach((n) => { counts[n.notebookId] = (counts[n.notebookId] || 0) + 1; });
-    return counts;
-  }, [notes]);
 
   // When on mobile and a note becomes active via selection, switch to editor pane.
   const handleSelectNote = (id: string) => {
@@ -110,6 +105,7 @@ const Index = () => {
       onCreateNotebook={createNotebook} onUpdateNotebook={updateNotebook} onDeleteNotebook={deleteNotebook}
       onCreateLabel={createLabel} onUpdateLabel={updateLabel} onDeleteLabel={deleteLabel}
       noteCountByNotebook={noteCountByNotebook}
+      noteCountByLabel={noteCountByLabel}
       onCollapse={() => {
         if (isDesktop) setDesktopSidebarVisible(false);
         else setDrawerOpen(false);
