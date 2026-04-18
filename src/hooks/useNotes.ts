@@ -249,7 +249,7 @@ export function useNotes() {
     const heartbeat = window.setInterval(() => {
       api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId, mode: activePresenceMode } })
         .catch(() => undefined);
-    }, 20_000);
+    }, 10_000);
     return () => window.clearInterval(heartbeat);
   }, [activeNoteId, activePresenceMode, user]);
 

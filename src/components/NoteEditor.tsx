@@ -61,8 +61,19 @@ export function NoteEditor({
   const [lockError, setLockError] = useState('');
   const [unlockInput, setUnlockInput] = useState('');
   const [unlockError, setUnlockError] = useState('');
-  const [mode, setMode] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
+  const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
+
+  // Wrapped setter so parent presence-mode is notified IMMEDIATELY (without
+  // waiting for a useEffect). This guarantees the POST /events/presence fires
+  // in the same tick as the user click.
+  const setMode = useCallback((next: 'edit' | 'view' | ((m: 'edit' | 'view') => 'edit' | 'view')) => {
+    setModeRaw((prev) => {
+      const value = typeof next === 'function' ? (next as (m: 'edit' | 'view') => 'edit' | 'view')(prev) : next;
+      if (value !== prev) onModeChange?.(value);
+      return value;
+    });
+  }, [onModeChange]);
 
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;
@@ -124,12 +135,13 @@ export function NoteEditor({
   // Locked view appears whenever the content is encrypted and not yet unlocked this session.
   const showLockedView = !!note && isLocked && !isUnlocked && isEncrypted(note.content);
 
+  // Notify parent of the *effective* mode when external constraints change.
+  // The wrapped setMode already notifies on user-driven changes; this covers
+  // cases like the note becoming read-only/locked while we are "editing".
   useEffect(() => {
-    if (!note) {
-      onModeChange?.('view');
-      return;
-    }
-    onModeChange?.(mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view');
+    if (!note) { onModeChange?.('view'); return; }
+    const effective = mode === 'edit' && !isReadOnly && !showLockedView ? 'edit' : 'view';
+    onModeChange?.(effective);
   }, [isReadOnly, mode, note, onModeChange, showLockedView]);
 
   // Display value: when content is encrypted+unlocked, show plaintext from session map.
