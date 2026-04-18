@@ -64,16 +64,9 @@ export function NoteEditor({
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
 
-  // Wrapped setter so parent presence-mode is notified IMMEDIATELY (without
-  // waiting for a useEffect). This guarantees the POST /events/presence fires
-  // in the same tick as the user click.
-  const setMode = useCallback((next: 'edit' | 'view' | ((m: 'edit' | 'view') => 'edit' | 'view')) => {
-    setModeRaw((prev) => {
-      const value = typeof next === 'function' ? (next as (m: 'edit' | 'view') => 'edit' | 'view')(prev) : next;
-      if (value !== prev) onModeChange?.(value);
-      return value;
-    });
-  }, [onModeChange]);
+  // Plain setter — the effect below reports the *effective* mode to the parent.
+  // (Calling side-effects inside a state updater is unreliable in StrictMode.)
+  const setMode = setModeRaw;
 
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;

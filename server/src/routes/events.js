@@ -3,11 +3,14 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
-import { subscribe, setPresence, clearPresenceForNote, listViewers, publish, removeDevicePresence } from '../lib/events.js';
+import { subscribe, setPresence, clearPresenceForNote, listViewers, publish, removeDevicePresence, setPresenceRecipientsResolver } from '../lib/events.js';
 import { recipientsForNote } from '../lib/notes.js';
 
 const router = Router();
 const SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
+
+// Wire up the SSE-disconnect broadcast resolver.
+setPresenceRecipientsResolver((noteId) => recipientsForNote(noteId));
 
 // SSE stream — auth via query token because EventSource cannot set headers.
 router.get('/stream', async (req, res) => {
