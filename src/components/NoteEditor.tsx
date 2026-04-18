@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Eye, Pencil, Minus, ChevronDown, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, Bold, Italic, Strikethrough, Code, Link, Image, Quote, List, ListOrdered, ListChecks, Table, CodeSquare, ArrowLeft, RotateCcw } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Note, Notebook, Label } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { QuillEditor } from '@/components/QuillEditor';
 import {
   isEncrypted, isHashedPassword,
   encryptPayload, decryptPayload,
@@ -28,21 +27,9 @@ interface NoteEditorProps {
   onPurge?: (id: string) => void;
 }
 
-const headingOptions = [
-  { label: 'Hoofdtekst', prefix: '', replace: true },
-  { label: 'H1', prefix: '# ', replace: true },
-  { label: 'H2', prefix: '## ', replace: true },
-  { label: 'H3', prefix: '### ', replace: true },
-  { label: 'H4', prefix: '#### ', replace: true },
-  { label: 'H5', prefix: '##### ', replace: true },
-];
-
 export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge }: NoteEditorProps) {
-  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
-  const [showHeadingMenu, setShowHeadingMenu] = useState(false);
   const [showLockDialog, setShowLockDialog] = useState(false);
   const [lockPassword, setLockPassword] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
@@ -51,13 +38,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const [unlockError, setUnlockError] = useState('');
   // noteId -> derived plain content (only kept in memory for this session)
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
-
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.style.height = 'auto';
-      contentRef.current.style.height = contentRef.current.scrollHeight + 'px';
-    }
-  }, [note?.content]);
 
   useEffect(() => {
     setShowLabelPicker(false);
@@ -70,8 +50,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     // Re-lock any previously unlocked notes when switching notes:
     // leaving a note must require the password again on return.
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
-    // Open new (empty) notes in edit mode, existing notes in preview
-    setMode(note && note.content === '' ? 'edit' : 'preview');
   }, [note?.id]);
 
   const isLocked = !!note?.password;
@@ -95,11 +73,10 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   );
 
   const handleContentChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (html: string) => {
       if (!note) return;
-      const value = e.target.value;
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
+      // Quill emits "<p><br></p>" for empty content — normalise to empty string.
+      const value = html === '<p><br></p>' ? '' : html;
       if (isLocked && unlockedEntry) {
         void updateEncryptedContent(value);
       } else {
@@ -108,100 +85,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     },
     [note, onUpdate, isLocked, unlockedEntry, updateEncryptedContent],
   );
-
-  const insertAtCursor = useCallback((insertion: string) => {
-    const ta = contentRef.current;
-    if (!ta || !note) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = note.content;
-    const newText = text.substring(0, start) + insertion + text.substring(end);
-    onUpdate(note.id, { content: newText });
-    setTimeout(() => {
-      ta.focus();
-      const pos = start + insertion.length;
-      ta.setSelectionRange(pos, pos);
-    }, 0);
-  }, [note, onUpdate]);
-
-  const wrapSelection = useCallback((before: string, after: string, placeholder = '') => {
-    const ta = contentRef.current;
-    if (!ta || !note) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = note.content;
-    const selected = text.substring(start, end) || placeholder;
-    const newText = text.substring(0, start) + before + selected + after + text.substring(end);
-    onUpdate(note.id, { content: newText });
-    setTimeout(() => {
-      ta.focus();
-      const selStart = start + before.length;
-      const selEnd = selStart + selected.length;
-      ta.setSelectionRange(selStart, selEnd);
-    }, 0);
-  }, [note, onUpdate]);
-
-  const insertAtLineStart = useCallback((prefix: string) => {
-    const ta = contentRef.current;
-    if (!ta || !note) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = note.content;
-    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-    // Get all lines in selection
-    const beforeLines = text.substring(0, lineStart);
-    const lineEnd = text.indexOf('\n', end);
-    const actualEnd = lineEnd === -1 ? text.length : lineEnd;
-    const selectedLines = text.substring(lineStart, actualEnd);
-    const splitLines = selectedLines.split('\n');
-    const newLines = splitLines.map((line) => prefix + line).join('\n');
-    const newText = beforeLines + newLines + text.substring(actualEnd);
-    onUpdate(note.id, { content: newText });
-    // Move cursor/selection so it lands AFTER the inserted prefix(es), not before.
-    const totalPrefix = prefix.length * splitLines.length;
-    const newStart = start + prefix.length;
-    const newEnd = end + totalPrefix;
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(newStart, newEnd);
-    }, 0);
-  }, [note, onUpdate]);
-
-  const applyHeading = useCallback((prefix: string) => {
-    const ta = contentRef.current;
-    if (!ta || !note) return;
-    const start = ta.selectionStart;
-    const text = note.content;
-    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-    const lineEnd = text.indexOf('\n', start);
-    const actualEnd = lineEnd === -1 ? text.length : lineEnd;
-    let line = text.substring(lineStart, actualEnd);
-    line = line.replace(/^#{1,6}\s*/, '');
-    const newLine = prefix + line;
-    const newText = text.substring(0, lineStart) + newLine + text.substring(actualEnd);
-    onUpdate(note.id, { content: newText });
-    setShowHeadingMenu(false);
-    setTimeout(() => { ta.focus(); }, 0);
-  }, [note, onUpdate]);
-
-  const insertHorizontalRule = useCallback(() => {
-    const ta = contentRef.current;
-    if (!ta || !note) return;
-    const start = ta.selectionStart;
-    const text = note.content;
-    const before = start > 0 && text[start - 1] !== '\n' ? '\n' : '';
-    const after = start < text.length && text[start] !== '\n' ? '\n' : '';
-    insertAtCursor(before + '\n---\n' + after);
-  }, [note, insertAtCursor]);
-
-  const insertTable = useCallback(() => {
-    const table = '\n| Kolom 1 | Kolom 2 | Kolom 3 |\n| --- | --- | --- |\n| cel | cel | cel |\n';
-    insertAtCursor(table);
-  }, [insertAtCursor]);
-
-  const insertCodeBlock = useCallback(() => {
-    wrapSelection('\n```\n', '\n```\n', 'code');
-  }, [wrapSelection]);
 
   const handleAddNewLabel = () => {
     if (!note || !newLabelName.trim()) return;
@@ -237,7 +120,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
   const handleRemovePassword = () => {
     if (!note) return;
     const entry = unlocked.get(note.id);
-    // Restore plaintext content (we have it in the session map)
     if (entry) {
       onUpdate(note.id, { content: entry.content, password: null });
     } else {
@@ -261,8 +143,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
       }));
 
       // --- Lazy migration ---
-      // Legacy notes had plaintext password + plaintext content (and possibly an encrypted
-      // title-blob from a previous version). Upgrade to hashed password + encrypted content.
       const needsHashUpgrade = !isHashedPassword(note.password);
       const needsEncryptUpgrade = !isEncrypted(note.content);
       const titleWasEncrypted = isEncrypted(note.title);
@@ -270,7 +150,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         const blob = await encryptPayload({ content: plainContent }, unlockInput);
         const verifier = needsHashUpgrade ? await hashPassword(unlockInput) : (note.password as string);
         const updates: Parameters<typeof onUpdate>[1] = { content: blob, password: verifier };
-        // If a previous version had encrypted the title, restore a placeholder title.
         if (titleWasEncrypted) updates.title = 'Beveiligde notitie';
         onUpdate(note.id, updates);
       }
@@ -307,33 +186,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
     : 0;
   const daysLeft = Math.max(0, 30 - daysInTrash);
 
-  const updateNoteContent = (next: string) => {
-    if (isLocked && unlockedEntry) {
-      void updateEncryptedContent(next);
-    } else {
-      onUpdate(note.id, { content: next });
-    }
-  };
-
-  const toggleChecklistItemAtIndex = (targetIndex: number) => {
-    const lines = displayContent.split('\n');
-    let currentIndex = -1;
-
-    for (let i = 0; i < lines.length; i += 1) {
-      if (/^\s*[-*+]\s+\[(?: |x|X)\]\s+/.test(lines[i])) {
-        currentIndex += 1;
-        if (currentIndex === targetIndex) {
-          lines[i] = lines[i].replace(/^((?:\s*[-*+]\s+\[)(?: |x|X)(\]\s+))/, (_m, start, end) => {
-            const isChecked = /\[[xX]\]\s+/.test(lines[i]);
-            return `${start}${isChecked ? ' ' : 'x'}${end}`;
-          });
-          updateNoteContent(lines.join('\n'));
-          return;
-        }
-      }
-    }
-  };
-
   return (
     <motion.div key={note.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}
       className="flex-1 flex flex-col bg-background h-full overflow-hidden min-w-0">
@@ -365,7 +217,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           </div>
         </div>
       )}
-      {/* Toolbar */}
+
+      {/* Header bar */}
       <div className="flex items-start lg:items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-border">
         <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-3 text-xs text-muted-foreground min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -383,20 +236,6 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {/* Mode toggle */}
-          <div className="flex items-center border border-border rounded-md mr-1">
-            <button onClick={() => setMode('edit')}
-              className={`p-1.5 rounded-l-md transition-colors ${mode === 'edit' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              title="Bewerken">
-              <Pencil size={14} />
-            </button>
-            <button onClick={() => setMode('preview')}
-              className={`p-1.5 rounded-r-md transition-colors ${mode === 'preview' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              title="Voorbeeld">
-              <Eye size={14} />
-            </button>
-          </div>
-
           <div className="relative">
             <button onClick={() => setShowLabelPicker(!showLabelPicker)}
               className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Labels">
@@ -475,6 +314,13 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               </>
             )}
           </div>
+          {isLocked && isUnlocked && (
+            <button onClick={handleRemovePassword}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Wachtwoord verwijderen">
+              <LockOpen size={16} />
+            </button>
+          )}
           <button onClick={() => onUpdate(note.id, { pinned: !note.pinned })}
             className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title={note.pinned ? 'Losmaken' : 'Vastpinnen'}>
@@ -533,190 +379,24 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
         </div>
       ) : (
         <>
-          {/* Formatting toolbar (edit mode only) */}
-          {mode === 'edit' && (
-            <div className="flex items-center gap-0.5 px-6 py-1.5 border-b border-border/50 flex-wrap">
-              {/* Heading dropdown */}
-              <div className="relative">
-                <button onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  title="Koppen">
-                  <span className="font-medium">Heading</span>
-                  <ChevronDown size={12} />
-                </button>
-                {showHeadingMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowHeadingMenu(false)} />
-                    <div className="absolute left-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
-                      {headingOptions.map((opt) => (
-                        <button key={opt.label} onClick={() => applyHeading(opt.prefix)}
-                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2">
-                          <span className="font-medium"
-                            style={{ fontSize: opt.label === 'H1' ? '16px' : opt.label === 'H2' ? '14px' : opt.label === 'H3' ? '13px' : opt.label === 'H4' ? '12px' : opt.label === 'H5' ? '11px' : '13px' }}>
-                            {opt.label === 'Hoofdtekst' ? 'Hoofdtekst' : opt.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="w-px h-4 bg-border mx-1" />
-
-              {/* Inline formatting */}
-              <button onClick={() => wrapSelection('**', '**', 'vetgedrukt')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Vetgedrukt (Ctrl+B)">
-                <Bold size={14} />
-              </button>
-              <button onClick={() => wrapSelection('*', '*', 'cursief')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Cursief (Ctrl+I)">
-                <Italic size={14} />
-              </button>
-              <button onClick={() => wrapSelection('~~', '~~', 'doorgestreept')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Doorhalen">
-                <Strikethrough size={14} />
-              </button>
-              <button onClick={() => wrapSelection('`', '`', 'code')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Inline code">
-                <Code size={14} />
-              </button>
-
-              <div className="w-px h-4 bg-border mx-1" />
-
-              {/* Block formatting */}
-              <button onClick={() => insertAtLineStart('> ')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Citaat">
-                <Quote size={14} />
-              </button>
-              <button onClick={() => insertAtLineStart('- ')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Ongenummerde lijst">
-                <List size={14} />
-              </button>
-              <button onClick={() => insertAtLineStart('1. ')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Genummerde lijst">
-                <ListOrdered size={14} />
-              </button>
-              <button onClick={() => insertAtLineStart('- [ ] ')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Takenlijst">
-                <ListChecks size={14} />
-              </button>
-
-              <div className="w-px h-4 bg-border mx-1" />
-
-              {/* Insert elements */}
-              <button onClick={() => wrapSelection('[', '](url)', 'linktekst')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Link invoegen">
-                <Link size={14} />
-              </button>
-              <button onClick={() => insertAtCursor('![alt tekst](afbeelding-url)')}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Afbeelding invoegen">
-                <Image size={14} />
-              </button>
-              <button onClick={insertCodeBlock}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Codeblok">
-                <CodeSquare size={14} />
-              </button>
-              <button onClick={insertTable}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Tabel invoegen">
-                <Table size={14} />
-              </button>
-              <button onClick={insertHorizontalRule}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Horizontale lijn">
-                <Minus size={14} />
-              </button>
-            </div>
-          )}
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-6 max-w-3xl mx-auto w-full">
+          {/* Title */}
+          <div className="px-8 pt-6 pb-2 max-w-3xl mx-auto w-full">
             <input
               value={note.title}
               onChange={(e) => onUpdate(note.id, { title: e.target.value })}
               onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
-              className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 mb-4"
+              className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40"
               placeholder="Titel..."
-              readOnly={mode === 'preview'}
+              readOnly={trashMode}
             />
-            {mode === 'edit' ? (
-              <textarea ref={contentRef} value={displayContent} onChange={handleContentChange}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); wrapSelection('**', '**', 'vetgedrukt'); return; }
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); wrapSelection('*', '*', 'cursief'); return; }
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); wrapSelection('[', '](url)', 'linktekst'); return; }
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    const ta = e.currentTarget;
-                    const start = ta.selectionStart;
-                    const end = ta.selectionEnd;
-                    const text = displayContent;
-                    if (start !== end) return;
-                    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-                    const currentLine = text.substring(lineStart, start);
-                    const listMatch = currentLine.match(/^(\s*)([-*+]\s+\[(?: |x|X)\]\s+|[-*+]\s+|(\d+)\.\s+)(.*)$/);
-                    if (!listMatch) return;
-                    const [, indent, marker, numStr, rest] = listMatch;
-                    e.preventDefault();
-                    let nextText: string;
-                    let nextCursor: number;
-                    if (rest.length === 0) {
-                      const removeStart = lineStart;
-                      nextText = text.substring(0, removeStart) + text.substring(start);
-                      nextCursor = removeStart;
-                    } else {
-                      let nextMarker = marker;
-                      nextMarker = nextMarker.replace(/\[(x|X)\]/, '[ ]');
-                      if (numStr) {
-                        const n = parseInt(numStr, 10) + 1;
-                        nextMarker = `${n}. `;
-                      }
-                      const insertion = '\n' + indent + nextMarker;
-                      nextText = text.substring(0, start) + insertion + text.substring(end);
-                      nextCursor = start + insertion.length;
-                    }
-                    updateNoteContent(nextText);
-                    setTimeout(() => {
-                      ta.focus();
-                      ta.setSelectionRange(nextCursor, nextCursor);
-                    }, 0);
-                  }
-                }}
-                className="w-full bg-transparent outline-none resize-none text-base md:text-[15px] leading-relaxed placeholder:text-muted-foreground/40 min-h-[60vh] font-mono"
-                placeholder="Schrijf in markdown..." />
-            ) : (() => {
-              let previewCheckboxIndex = -1;
-              return (
-                <div className="prose prose-sm max-w-none text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-blockquote:border-primary/40 prose-blockquote:text-muted-foreground prose-li:text-foreground prose-th:text-foreground prose-td:text-foreground prose-hr:border-foreground/30 prose-hr:border-t-2">
-                  {displayContent ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        input: ({ ...props }) => {
-                          if (props.type !== 'checkbox' || trashMode) {
-                            return <input {...props} />;
-                          }
-                          previewCheckboxIndex += 1;
-                          const currentIndex = previewCheckboxIndex;
-                          return (
-                            <input
-                              {...props}
-                              disabled={false}
-                              readOnly={false}
-                              className="cursor-pointer"
-                              onChange={() => toggleChecklistItemAtIndex(currentIndex)}
-                            />
-                          );
-                        },
-                      }}
-                    >
-                      {displayContent}
-                    </ReactMarkdown>
-                  ) : (
-                    <p className="text-muted-foreground/50 italic">Geen inhoud</p>
-                  )}
-                </div>
-              );
-            })()}
           </div>
+          {/* Quill editor */}
+          <QuillEditor
+            value={displayContent}
+            onChange={handleContentChange}
+            readOnly={trashMode}
+            placeholder="Begin met schrijven..."
+          />
         </>
       )}
     </motion.div>
