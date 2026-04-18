@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye } from 'lucide-react';
-import { Note, Notebook, Label } from '@/types/notes';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput } from 'lucide-react';
+import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { QuillEditor } from '@/components/QuillEditor';
+import { ShareDialog } from '@/components/ShareDialog';
+import { PresenceAvatars } from '@/components/PresenceAvatars';
 import {
   isEncrypted, isHashedPassword,
   encryptPayload, decryptPayload,
@@ -21,15 +23,29 @@ interface NoteEditorProps {
   onToggleLabel: (noteId: string, labelId: string) => void;
   onCreateLabel: (name: string) => Label;
   onBack?: () => void;
-  /** When true, the editor shows a read-only "in prullenbak" view with restore + permanent delete. */
   trashMode?: boolean;
   onRestore?: (id: string) => void;
   onPurge?: (id: string) => void;
-  /** When true, the note was just created and should open in edit mode. */
   isNewNote?: boolean;
+  // Sharing & realtime
+  currentUserId?: string;
+  viewers?: PresenceViewer[];
+  remoteUpdate?: { noteId: string; by: string | null } | null;
+  onDismissRemoteUpdate?: (refresh: boolean) => void;
+  searchUsers?: (q: string) => Promise<UserSearchResult[]>;
+  listShares?: (noteId: string) => Promise<NoteShare[]>;
+  shareNote?: (noteId: string, email: string, perm: 'read' | 'write') => Promise<{ error?: string }>;
+  updateShare?: (noteId: string, recipientId: string, perm: 'read' | 'write') => Promise<void>;
+  removeShare?: (noteId: string, recipientId: string) => Promise<void>;
+  onPickSharedNotebook?: (noteId: string) => void;
 }
 
-export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel, onBack, trashMode = false, onRestore, onPurge, isNewNote = false }: NoteEditorProps) {
+export function NoteEditor({
+  note, notebooks, labels, onUpdate, onDelete, onArchive, onToggleLabel, onCreateLabel,
+  onBack, trashMode = false, onRestore, onPurge, isNewNote = false,
+  currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
+  searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
+}: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
