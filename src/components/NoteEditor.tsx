@@ -162,6 +162,18 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
 
       setUnlockInput('');
       setUnlockError('');
+      // Blur the input and reset any iOS Safari scroll/zoom that may have
+      // occurred while focusing the password field.
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      const resetScroll = () => {
+        window.scrollTo(0, 0);
+        if (document.body.scrollTop !== 0) document.body.scrollTop = 0;
+      };
+      requestAnimationFrame(resetScroll);
+      setTimeout(resetScroll, 100);
+      setTimeout(resetScroll, 300);
     } catch (e) {
       console.error('Decrypt failed', e);
       setUnlockError('Ontsleutelen mislukt');
@@ -315,11 +327,14 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
                   <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5"><Lock size={14} /> Notitie beveiligen</h4>
                   <div className="space-y-2">
                     <input type="password" value={lockPassword} onChange={(e) => { setLockPassword(e.target.value); setLockError(''); }}
-                      placeholder="Wachtwoord" className="w-full text-sm px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
+                      placeholder="Wachtwoord"
+                      style={{ fontSize: '16px' }}
+                      className="w-full px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
                     <input type="password" value={lockConfirm} onChange={(e) => { setLockConfirm(e.target.value); setLockError(''); }}
                       placeholder="Bevestig wachtwoord"
                       onKeyDown={(e) => { if (e.key === 'Enter') handleSetPassword(); }}
-                      className="w-full text-sm px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
+                      style={{ fontSize: '16px' }}
+                      className="w-full px-3 py-1.5 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring" />
                     {lockError && <p className="text-xs text-destructive">{lockError}</p>}
                     <button onClick={handleSetPassword}
                       className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-1.5 hover:opacity-90 transition-opacity">
@@ -384,7 +399,8 @@ export function NoteEditor({ note, notebooks, labels, onUpdate, onDelete, onArch
               <input type="password" value={unlockInput} onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleUnlock(); }}
                 placeholder="Voer wachtwoord in..."
-                className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring text-center" />
+                style={{ fontSize: '16px' }}
+                className="w-full px-3 py-2 border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-ring text-center" />
               {unlockError && <p className="text-xs text-destructive">Onjuist wachtwoord</p>}
               <button onClick={handleUnlock}
                 className="w-full text-sm font-medium bg-primary text-primary-foreground rounded-md py-2 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
