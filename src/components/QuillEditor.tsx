@@ -54,7 +54,21 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder }: 
         toolbarTable: true,
       },
       keyboard: {
-        bindings: QuillTableBetter.keyboardBindings,
+        bindings: {
+          ...QuillTableBetter.keyboardBindings,
+          // Shift+Enter inserts a line break (<br>) within the current paragraph
+          // instead of creating a new paragraph block.
+          'shift-enter': {
+            key: 'Enter',
+            shiftKey: true,
+            handler(this: { quill: any }, range: { index: number; length: number }) {
+              const quill = this.quill;
+              quill.insertEmbed(range.index, 'break', true, 'user');
+              // Move cursor past the inserted break
+              quill.setSelection(range.index + 1, 0, 'silent');
+            },
+          },
+        },
       },
       clipboard: { matchVisual: false },
     }),
