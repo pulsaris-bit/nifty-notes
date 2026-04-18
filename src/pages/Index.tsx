@@ -22,6 +22,8 @@ const Index = () => {
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
   // Notebook picker dialog (when creating a note without a notebook context)
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Tracks the most recently created note so the editor opens it in edit mode.
+  const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
 
   const {
     notebooks, notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
@@ -49,13 +51,15 @@ const Index = () => {
       setPickerOpen(true);
       return;
     }
-    createNote();
+    const id = createNote();
+    if (id) setLastCreatedNoteId(id);
     if (isMobile) setMobileView('editor');
   };
 
   const handlePickNotebookForNewNote = (notebookId: string) => {
     setActiveNotebookId(notebookId);
-    createNote(notebookId);
+    const id = createNote(notebookId);
+    if (id) setLastCreatedNoteId(id);
     if (isMobile) setMobileView('editor');
   };
 
