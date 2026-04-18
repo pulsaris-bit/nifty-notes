@@ -429,6 +429,13 @@ export function NoteEditor({
               <Trash2 size={16} />
             </button>
           )}
+          {!trashMode && !isOwner && (
+            <button
+              onClick={() => { if (confirm('Wil je deze gedeelde notitie verlaten? Hij verdwijnt uit jouw lijst maar blijft bestaan voor de eigenaar.')) onDelete(note.id); }}
+              className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Gedeelde notitie verlaten">
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -485,18 +492,42 @@ export function NoteEditor({
               rows={1}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."
-              readOnly={trashMode || mode === 'view'}
+              readOnly={isReadOnly || mode === 'view'}
             />
           </div>
+          {/* Remote-update banner (active note edited elsewhere) */}
+          {remoteUpdate && remoteUpdate.noteId === note.id && (
+            <div className="mx-3 sm:mx-6 mb-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-xs flex items-center justify-between gap-2 flex-wrap">
+              <span className="flex items-center gap-1.5"><RefreshCw size={12} /> Deze notitie is elders bijgewerkt{remoteUpdate.by ? ` door ${remoteUpdate.by}` : ''}.</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => onDismissRemoteUpdate?.(false)} className="text-xs px-2 py-0.5 rounded hover:bg-background">Negeren</button>
+                <button onClick={() => onDismissRemoteUpdate?.(true)} className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground hover:opacity-90">Vernieuwen</button>
+              </div>
+            </div>
+          )}
           {/* Quill editor */}
           <QuillEditor
             value={displayContent}
             onChange={handleContentChange}
-            readOnly={trashMode || mode === 'view'}
-            hideToolbar={mode === 'view'}
+            readOnly={isReadOnly || mode === 'view'}
+            hideToolbar={mode === 'view' || isReadOnly}
             placeholder="Begin met schrijven..."
           />
         </>
+      )}
+      {/* Share dialog */}
+      {note && shareNote && listShares && updateShare && removeShare && searchUsers && (
+        <ShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          noteId={note.id}
+          noteTitle={note.title}
+          searchUsers={searchUsers}
+          listShares={listShares}
+          shareNote={shareNote}
+          updateShare={updateShare}
+          removeShare={removeShare}
+        />
       )}
     </motion.div>
   );
