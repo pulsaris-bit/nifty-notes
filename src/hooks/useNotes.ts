@@ -81,6 +81,7 @@ export function useNotes() {
   const [showArchived, setShowArchived] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [activePresenceMode, setActivePresenceMode] = useState<'view' | 'edit'>('view');
+  const [dataLoaded, setDataLoaded] = useState<boolean>(!HAS_API);
 
   // Realtime: presence per note + remote-update banner for active note
   const [presence, setPresence] = useState<Record<string, PresenceViewer[]>>({});
