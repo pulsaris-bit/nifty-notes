@@ -105,8 +105,14 @@ export function NoteList({
         ) : (
           sortedNotes.map((note) => {
             const encrypted = isEncrypted(note.content);
-            // Strip HTML tags + collapse whitespace for the list preview.
-            const plain = (note.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            // Strip HTML tags + decode entities + collapse whitespace for the list preview.
+            const stripped = (note.content || '')
+              .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+              .replace(/<[^>]+>/g, ' ');
+            const decoded = typeof window !== 'undefined'
+              ? (() => { const el = document.createElement('textarea'); el.innerHTML = stripped; return el.value; })()
+              : stripped;
+            const plain = decoded.replace(/\s+/g, ' ').trim();
             const previewDisplay = encrypted ? '••••••••' : (plain || 'Lege notitie');
             return (
             <button key={note.id} onClick={() => onSelectNote(note.id)}
