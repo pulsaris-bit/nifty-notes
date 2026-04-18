@@ -57,6 +57,9 @@ export function NoteSidebar({
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [editLabelName, setEditLabelName] = useState('');
 
+  const newEmojiBtnRef = useRef<HTMLButtonElement>(null);
+  const editEmojiBtnRef = useRef<HTMLButtonElement>(null);
+
   const handleCreateNb = () => {
     if (newNbName.trim()) { onCreateNotebook(newNbName.trim(), newNbEmoji); setNewNbName(''); setNewNbEmoji('📓'); setIsCreatingNb(false); }
   };
@@ -189,17 +192,17 @@ export function NoteSidebar({
                     <div key={nb.id} className="mx-2 mb-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="relative">
-                          <button onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
+                          <button ref={editEmojiBtnRef} onClick={() => setShowEditEmojiPicker(!showEditEmojiPicker)}
                             className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
                             {editNbEmoji}
                           </button>
                           {showEditEmojiPicker && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setShowEditEmojiPicker(false)} />
-                              <div className="absolute left-0 top-9 z-50">
-                                <EmojiGrid selected={editNbEmoji} onSelect={(e) => { setEditNbEmoji(e); setShowEditEmojiPicker(false); }} />
-                              </div>
-                            </>
+                            <EmojiPicker
+                              anchorRef={editEmojiBtnRef}
+                              selected={editNbEmoji}
+                              onSelect={(e) => { setEditNbEmoji(e); setShowEditEmojiPicker(false); }}
+                              onClose={() => setShowEditEmojiPicker(false)}
+                            />
                           )}
                         </div>
                         <input autoFocus value={editNbName} onChange={(e) => setEditNbName(e.target.value)}
@@ -226,17 +229,17 @@ export function NoteSidebar({
                   <div className="mx-2 mt-1 p-2 bg-sidebar-custom-accent rounded-md space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <button onClick={() => setShowNewEmojiPicker(!showNewEmojiPicker)}
+                        <button ref={newEmojiBtnRef} onClick={() => setShowNewEmojiPicker(!showNewEmojiPicker)}
                           className="w-8 h-8 flex items-center justify-center rounded bg-sidebar-custom-bg hover:bg-sidebar-custom-accent/80 text-base transition-colors">
                           {newNbEmoji}
                         </button>
                         {showNewEmojiPicker && (
-                          <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowNewEmojiPicker(false)} />
-                            <div className="absolute left-0 top-9 z-50">
-                              <EmojiGrid selected={newNbEmoji} onSelect={(e) => { setNewNbEmoji(e); setShowNewEmojiPicker(false); }} />
-                            </div>
-                          </>
+                          <EmojiPicker
+                            anchorRef={newEmojiBtnRef}
+                            selected={newNbEmoji}
+                            onSelect={(e) => { setNewNbEmoji(e); setShowNewEmojiPicker(false); }}
+                            onClose={() => setShowNewEmojiPicker(false)}
+                          />
                         )}
                       </div>
                       <input autoFocus value={newNbName} onChange={(e) => setNewNbName(e.target.value)}
