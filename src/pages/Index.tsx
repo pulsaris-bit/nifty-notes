@@ -35,6 +35,7 @@ const Index = () => {
     createNote, updateNote, deleteNote, restoreNote, purgeNote, archiveNote,
     createNotebook, updateNotebook, deleteNotebook,
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
+    flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
 
