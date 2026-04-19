@@ -137,7 +137,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       'color', 'background',
       'list',
       'indent', 'align',
-      'blockquote', 'code-block',
+      'blockquote', 'code-block', 'code-token',
       'link', 'image', 'video',
       'script',
       // table-better formats
