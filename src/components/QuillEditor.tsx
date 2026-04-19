@@ -14,13 +14,22 @@ if (typeof window !== 'undefined') {
   (window as any).hljs = hljs;
 }
 
-// Register the table module exactly once (HMR-safe).
+// Register the table module + all of its blots/formats exactly once
+// (HMR-safe). This MUST run before <ReactQuill> mounts, otherwise Quill
+// strips "table-better" from the formats whitelist (logging
+// "Cannot register 'table-better' specified in 'formats' config") and the
+// toolbar button silently does nothing.
 let tableRegistered = false;
 function ensureTableRegistered() {
   if (tableRegistered) return;
   Quill.register({ 'modules/table-better': QuillTableBetter }, true);
+  // Registers TableCell, TableRow, ..., and 'formats/table-better'.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (QuillTableBetter as any).register?.();
   tableRegistered = true;
 }
+// Register at module load so formats are available on first render.
+ensureTableRegistered();
 
 /**
  * Sanitize legacy table HTML so quill-table-better can parse it without
