@@ -194,8 +194,15 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       'blockquote', 'code-block', 'code-token',
       'link', 'image', 'video',
       'script',
-      // table-better formats
-      'table-better', 'table-cell-block', 'table-list', 'table-header',
+      // quill-table-better formats (NOT 'table-better' — that's a toolbar
+      // button, registered as 'formats/table-better' internally but not a
+      // user-facing format name).
+      'table-cell-block', 'table-th-block',
+      'table-cell', 'table-th',
+      'table-row', 'table-th-row',
+      'table-body', 'table-thead', 'table-temporary',
+      'table-container', 'table-col', 'table-colgroup',
+      'table-list', 'table-header',
     ],
     [],
   );
