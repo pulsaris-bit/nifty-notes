@@ -14,64 +14,12 @@ if (typeof window !== 'undefined') {
   (window as any).hljs = hljs;
 }
 
-// Register the table module + all of its blots/formats exactly once
-// (HMR-safe). This MUST run before <ReactQuill> mounts, otherwise Quill
-// strips "table-better" from the formats whitelist (logging
-// "Cannot register 'table-better' specified in 'formats' config") and the
-// toolbar button silently does nothing.
+// Register the table module exactly once (HMR-safe).
 let tableRegistered = false;
 function ensureTableRegistered() {
   if (tableRegistered) return;
   Quill.register({ 'modules/table-better': QuillTableBetter }, true);
-  // Registers TableCell, TableRow, ..., and 'formats/table-better'.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (QuillTableBetter as any).register?.();
   tableRegistered = true;
-}
-// Register at module load so formats are available on first render.
-ensureTableRegistered();
-
-/**
- * Sanitize legacy table HTML so quill-table-better can parse it without
- * crashing.
- *
- * `quill-table-better` expects every <td>/<th> to expose `colspan`,
- * `rowspan` and `data-row` attributes. Notes created with Quill's native
- * table module (or pasted from elsewhere) often lack these, which causes
- * `TableCell.create(undefined)` to throw "Cannot read properties of
- * undefined (reading 'colspan')" on mount — leaving the user with a blank
- * white screen.
- *
- * We pre-process the HTML once on the way in: ensure every table cell has
- * the required attributes, and drop the now-meaningless wrapper attributes
- * the legacy module added.
- */
-function sanitizeTableHtml(html: string): string {
-  if (!html || (html.indexOf('<td') === -1 && html.indexOf('<th') === -1)) return html;
-  try {
-    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
-    const root = doc.body.firstElementChild as HTMLElement | null;
-    if (!root) return html;
-    const cells = root.querySelectorAll('td, th');
-    let rowCounter = 0;
-    cells.forEach((cell) => {
-      if (!cell.getAttribute('colspan')) cell.setAttribute('colspan', '1');
-      if (!cell.getAttribute('rowspan')) cell.setAttribute('rowspan', '1');
-      if (!cell.getAttribute('data-row')) {
-        // Group cells per <tr> under a shared synthetic row id.
-        const tr = cell.closest('tr');
-        let rid = tr?.getAttribute('data-quill-row') || '';
-        if (!rid) {
-          rid = `row-${Math.random().toString(36).slice(2, 6)}-${rowCounter++}`;
-          if (tr) tr.setAttribute('data-quill-row', rid);
-        }
-        cell.setAttribute('data-row', rid);
-      }
-    });
-    return root.innerHTML;
-  } catch {
-    return html;
-  }
 }
 
 interface QuillEditorProps {
@@ -95,21 +43,14 @@ interface QuillEditorProps {
  * on click/focus inside the editable area.
  */
 export function QuillEditor({ value, onChange, readOnly = false, placeholder, hideToolbar = false }: QuillEditorProps) {
+  ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
 
-  // Pre-clean any legacy table HTML so quill-table-better doesn't crash.
-  const safeValue = useMemo(() => sanitizeTableHtml(value ?? ''), [value]);
-
   const imageHandler = useMemo(
     () => () => {
-      let editor: ReturnType<ReactQuill['getEditor']> | null = null;
-      try {
-        editor = ref.current?.getEditor() ?? null;
-      } catch {
-        return;
-      }
+      const editor = ref.current?.getEditor();
       if (!editor) return;
       const input = document.createElement('input');
       input.type = 'file';
@@ -199,38 +140,16 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       'blockquote', 'code-block', 'code-token',
       'link', 'image', 'video',
       'script',
-      // quill-table-better formats (NOT 'table-better' — that's a toolbar
-      // button, registered as 'formats/table-better' internally but not a
-      // user-facing format name).
-      'table-cell-block', 'table-th-block',
-      'table-cell', 'table-th',
-      'table-row', 'table-th-row',
-      'table-body', 'table-thead', 'table-temporary',
-      'table-container', 'table-col', 'table-colgroup',
-      'table-list', 'table-header',
+      // table-better formats
+      'table-better', 'table-cell-block', 'table-list', 'table-header',
     ],
     [],
   );
 
   useEffect(() => {
-    const syncReadOnly = () => {
-      try {
-        const editor = ref.current?.getEditor();
-        if (!editor) return false;
-        editor.enable(!readOnly);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    if (syncReadOnly()) return;
-
-    const frame = requestAnimationFrame(() => {
-      syncReadOnly();
-    });
-
-    return () => cancelAnimationFrame(frame);
+    const editor = ref.current?.getEditor();
+    if (!editor) return;
+    editor.enable(!readOnly);
   }, [readOnly]);
 
   // Hide the toolbar when the user scrolls inside the editor; show it again
@@ -294,9 +213,8 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       <ReactQuill
         ref={ref}
         theme="snow"
-        value={safeValue}
+        value={value}
         onChange={(html) => onChange(html)}
-        useSemanticHTML={false}
         readOnly={readOnly}
         placeholder={placeholder}
         modules={modules}
