@@ -197,6 +197,15 @@
   border: 1px solid hsl(var(--border));
   border-radius: 6px;
   padding: 12px;
+  overflow-x: auto;
+}
+/* highlight.js tokens inherit colors from the github theme but we keep the
+   surrounding <pre> background from our design tokens above. */
+.quill-host .ql-editor pre.ql-syntax .hljs,
+.quill-host .ql-editor pre .hljs {
+  background: transparent;
+  padding: 0;
+  color: inherit;
 }
 .quill-host .ql-editor code {
   background: hsl(var(--muted));

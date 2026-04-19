@@ -3,8 +3,16 @@ import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import QuillTableBetter from 'quill-table-better';
 import 'quill-table-better/dist/quill-table-better.css';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
 import { API_URL, getToken, getDeviceId, HAS_API } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Expose hljs globally so Quill's syntax module can find it.
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).hljs = hljs;
+}
 
 // Register the table module exactly once (HMR-safe).
 let tableRegistered = false;
@@ -92,6 +100,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
     () => ({
       // The native table module must be disabled when using table-better.
       table: false,
+      syntax: { hljs },
       toolbar: {
         container: [
           [{ header: [1, 2, 3, 4, 5, false] }, { font: [] }],
