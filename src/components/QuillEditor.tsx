@@ -152,23 +152,64 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
     editor.enable(!readOnly);
   }, [readOnly]);
 
-  // Strip HTML on paste: always insert clipboard content as plain text so
-  // pasted HTML markup doesn't leak styling/structure into the note.
+  // Strip HTML on paste: remove all tags and only keep the visible text.
   useEffect(() => {
     const editor = ref.current?.getEditor();
     if (!editor) return;
     const root: HTMLElement = editor.root;
+
+    const htmlToPlainText = (html: string) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const blockTags = new Set([
+        'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DIV', 'DL', 'DT', 'DD',
+        'FIELDSET', 'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'H1', 'H2', 'H3',
+        'H4', 'H5', 'H6', 'HEADER', 'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE',
+        'SECTION', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR', 'UL',
+      ]);
+      const parts: string[] = [];
+
+      const walk = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          parts.push(node.textContent ?? '');
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const el = node as HTMLElement;
+        if (el.tagName === 'BR') {
+          parts.push('\n');
+          return;
+        }
+        if (el.tagName === 'LI') parts.push('• ');
+
+        el.childNodes.forEach(walk);
+
+        if (blockTags.has(el.tagName)) parts.push('\n');
+      };
+
+      doc.body.childNodes.forEach(walk);
+
+      return parts
+        .join('')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trimEnd();
+    };
+
     const onPaste = (e: ClipboardEvent) => {
       if (!e.clipboardData) return;
-      const text = e.clipboardData.getData('text/plain');
+      const html = e.clipboardData.getData('text/html');
+      const plainText = e.clipboardData.getData('text/plain');
+      const text = html ? htmlToPlainText(html) || plainText : plainText;
+      if (!text) return;
+
       e.preventDefault();
       const range = editor.getSelection(true) ?? { index: editor.getLength(), length: 0 };
       if (range.length > 0) editor.deleteText(range.index, range.length, 'user');
-      if (text) {
-        editor.insertText(range.index, text, 'user');
-        editor.setSelection({ index: range.index + text.length, length: 0 });
-      }
+      editor.insertText(range.index, text, 'user');
+      editor.setSelection({ index: range.index + text.length, length: 0 });
     };
+
     root.addEventListener('paste', onPaste);
     return () => root.removeEventListener('paste', onPaste);
   }, []);
