@@ -259,7 +259,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       <ReactQuill
         ref={ref}
         theme="snow"
-        value={value}
+        value={safeValue}
         onChange={(html) => onChange(html)}
         readOnly={readOnly}
         placeholder={placeholder}
