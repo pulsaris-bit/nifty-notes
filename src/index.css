@@ -238,6 +238,19 @@
   border-radius: 6px;
   z-index: 30;
 }
+.quill-host .ql-snow .ql-picker-options .ql-picker-item {
+  color: hsl(var(--popover-foreground));
+}
+.quill-host .ql-snow .ql-picker-options .ql-picker-item:hover,
+.quill-host .ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+  color: hsl(var(--primary));
+}
+/* Code-block language picker (syntax module) — Quill renders the current
+   label on a dark toolbar background by default; force readable colors. */
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-item {
+  color: hsl(var(--popover-foreground));
+}
 .quill-host .ql-snow .ql-picker.ql-expanded .ql-picker-options {
   z-index: 30;
 }
