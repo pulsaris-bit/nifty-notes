@@ -95,7 +95,6 @@ interface QuillEditorProps {
  * on click/focus inside the editable area.
  */
 export function QuillEditor({ value, onChange, readOnly = false, placeholder, hideToolbar = false }: QuillEditorProps) {
-  ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
