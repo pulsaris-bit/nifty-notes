@@ -246,10 +246,35 @@
   color: hsl(var(--primary));
 }
 /* Code-block language picker (syntax module) — Quill renders the current
-   label on a dark toolbar background by default; force readable colors. */
-.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label,
-.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-item {
-  color: hsl(var(--popover-foreground));
+   label on a dark toolbar background by default; force readable colors.
+   Use the primary (orange) brand color so it matches the "Nieuwe notitie"
+   button. */
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+  border-radius: 4px;
+}
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label::before {
+  color: hsl(var(--primary-foreground));
+}
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label .ql-stroke {
+  stroke: hsl(var(--primary-foreground));
+}
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item::before {
+  color: hsl(var(--primary-foreground));
+}
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item:hover,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item:hover::before,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item.ql-selected,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options .ql-picker-item.ql-selected::before {
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary) / 0.8);
 }
 .quill-host .ql-snow .ql-picker.ql-expanded .ql-picker-options {
   z-index: 30;
