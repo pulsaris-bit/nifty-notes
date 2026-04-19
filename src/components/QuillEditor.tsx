@@ -276,6 +276,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
         theme="snow"
         value={safeValue}
         onChange={(html) => onChange(html)}
+        useSemanticHTML={false}
         readOnly={readOnly}
         placeholder={placeholder}
         modules={modules}
