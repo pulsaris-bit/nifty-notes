@@ -91,6 +91,9 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
 
+  // Pre-clean any legacy table HTML so quill-table-better doesn't crash.
+  const safeValue = useMemo(() => sanitizeTableHtml(value ?? ''), [value]);
+
   const imageHandler = useMemo(
     () => () => {
       const editor = ref.current?.getEditor();
