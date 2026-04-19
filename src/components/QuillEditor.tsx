@@ -22,6 +22,49 @@ function ensureTableRegistered() {
   tableRegistered = true;
 }
 
+/**
+ * Sanitize legacy table HTML so quill-table-better can parse it without
+ * crashing.
+ *
+ * `quill-table-better` expects every <td>/<th> to expose `colspan`,
+ * `rowspan` and `data-row` attributes. Notes created with Quill's native
+ * table module (or pasted from elsewhere) often lack these, which causes
+ * `TableCell.create(undefined)` to throw "Cannot read properties of
+ * undefined (reading 'colspan')" on mount — leaving the user with a blank
+ * white screen.
+ *
+ * We pre-process the HTML once on the way in: ensure every table cell has
+ * the required attributes, and drop the now-meaningless wrapper attributes
+ * the legacy module added.
+ */
+function sanitizeTableHtml(html: string): string {
+  if (!html || (html.indexOf('<td') === -1 && html.indexOf('<th') === -1)) return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+    const root = doc.body.firstElementChild as HTMLElement | null;
+    if (!root) return html;
+    const cells = root.querySelectorAll('td, th');
+    let rowCounter = 0;
+    cells.forEach((cell) => {
+      if (!cell.getAttribute('colspan')) cell.setAttribute('colspan', '1');
+      if (!cell.getAttribute('rowspan')) cell.setAttribute('rowspan', '1');
+      if (!cell.getAttribute('data-row')) {
+        // Group cells per <tr> under a shared synthetic row id.
+        const tr = cell.closest('tr');
+        let rid = tr?.getAttribute('data-quill-row') || '';
+        if (!rid) {
+          rid = `row-${Math.random().toString(36).slice(2, 6)}-${rowCounter++}`;
+          if (tr) tr.setAttribute('data-quill-row', rid);
+        }
+        cell.setAttribute('data-row', rid);
+      }
+    });
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 interface QuillEditorProps {
   value: string;
   onChange: (html: string) => void;
