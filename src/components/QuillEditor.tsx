@@ -180,6 +180,14 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
           parts.push('\n');
           return;
         }
+        // <pre> often contains nested syntax-highlight spans whose text would
+        // otherwise be picked up twice (once via textContent on inner spans and
+        // again via the outer text). Use textContent once and stop recursing.
+        if (el.tagName === 'PRE') {
+          parts.push(el.textContent ?? '');
+          parts.push('\n');
+          return;
+        }
         if (el.tagName === 'LI') parts.push('• ');
 
         el.childNodes.forEach(walk);
