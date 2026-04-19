@@ -197,6 +197,15 @@
   border: 1px solid hsl(var(--border));
   border-radius: 6px;
   padding: 12px;
+  overflow-x: auto;
+}
+/* highlight.js tokens inherit colors from the github theme but we keep the
+   surrounding <pre> background from our design tokens above. */
+.quill-host .ql-editor pre.ql-syntax .hljs,
+.quill-host .ql-editor pre .hljs {
+  background: transparent;
+  padding: 0;
+  color: inherit;
 }
 .quill-host .ql-editor code {
   background: hsl(var(--muted));
@@ -228,6 +237,48 @@
   color: hsl(var(--popover-foreground));
   border-radius: 6px;
   z-index: 30;
+}
+.quill-host .ql-snow .ql-picker-options .ql-picker-item {
+  color: hsl(var(--popover-foreground));
+}
+.quill-host .ql-snow .ql-picker-options .ql-picker-item:hover,
+.quill-host .ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+  color: hsl(var(--primary));
+}
+/* Code-block language picker (syntax module) — In Quill 2 this is a native
+   <select> element rendered inside the code-block container, NOT an
+   .ql-picker in the toolbar. Style the native select with the primary
+   (orange) brand color so it matches the "Nieuwe notitie" button. */
+.quill-host .ql-editor .ql-code-block-container {
+  position: relative;
+}
+.quill-host .ql-editor .ql-code-block-container select,
+.quill-host .ql-editor .ql-code-block-container .ql-ui,
+.quill-host .ql-editor select.ql-ui,
+.quill-host select.ql-ui {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: 1px solid hsl(var(--primary)) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+.quill-host .ql-editor .ql-code-block-container select option,
+.quill-host .ql-editor .ql-code-block-container .ql-ui option,
+.quill-host select.ql-ui option {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+/* Legacy .ql-picker variant (just in case the toolbar version is rendered) */
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-label,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-options,
+.quill-host .ql-snow .ql-picker.ql-code-block .ql-picker-item {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-color: hsl(var(--primary)) !important;
 }
 .quill-host .ql-snow .ql-picker.ql-expanded .ql-picker-options {
   z-index: 30;

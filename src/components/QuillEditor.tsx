@@ -3,8 +3,16 @@ import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import QuillTableBetter from 'quill-table-better';
 import 'quill-table-better/dist/quill-table-better.css';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
 import { API_URL, getToken, getDeviceId, HAS_API } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Expose hljs globally so Quill's syntax module can find it.
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).hljs = hljs;
+}
 
 // Register the table module exactly once (HMR-safe).
 let tableRegistered = false;
@@ -12,6 +20,49 @@ function ensureTableRegistered() {
   if (tableRegistered) return;
   Quill.register({ 'modules/table-better': QuillTableBetter }, true);
   tableRegistered = true;
+}
+
+/**
+ * Sanitize legacy table HTML so quill-table-better can parse it without
+ * crashing.
+ *
+ * `quill-table-better` expects every <td>/<th> to expose `colspan`,
+ * `rowspan` and `data-row` attributes. Notes created with Quill's native
+ * table module (or pasted from elsewhere) often lack these, which causes
+ * `TableCell.create(undefined)` to throw "Cannot read properties of
+ * undefined (reading 'colspan')" on mount — leaving the user with a blank
+ * white screen.
+ *
+ * We pre-process the HTML once on the way in: ensure every table cell has
+ * the required attributes, and drop the now-meaningless wrapper attributes
+ * the legacy module added.
+ */
+function sanitizeTableHtml(html: string): string {
+  if (!html || (html.indexOf('<td') === -1 && html.indexOf('<th') === -1)) return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+    const root = doc.body.firstElementChild as HTMLElement | null;
+    if (!root) return html;
+    const cells = root.querySelectorAll('td, th');
+    let rowCounter = 0;
+    cells.forEach((cell) => {
+      if (!cell.getAttribute('colspan')) cell.setAttribute('colspan', '1');
+      if (!cell.getAttribute('rowspan')) cell.setAttribute('rowspan', '1');
+      if (!cell.getAttribute('data-row')) {
+        // Group cells per <tr> under a shared synthetic row id.
+        const tr = cell.closest('tr');
+        let rid = tr?.getAttribute('data-quill-row') || '';
+        if (!rid) {
+          rid = `row-${Math.random().toString(36).slice(2, 6)}-${rowCounter++}`;
+          if (tr) tr.setAttribute('data-quill-row', rid);
+        }
+        cell.setAttribute('data-row', rid);
+      }
+    });
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
 }
 
 interface QuillEditorProps {
@@ -39,6 +90,9 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
+
+  // Pre-clean any legacy table HTML so quill-table-better doesn't crash.
+  const safeValue = useMemo(() => sanitizeTableHtml(value ?? ''), [value]);
 
   const imageHandler = useMemo(
     () => () => {
@@ -92,6 +146,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
     () => ({
       // The native table module must be disabled when using table-better.
       table: false,
+      syntax: { hljs },
       toolbar: {
         container: [
           [{ header: [1, 2, 3, 4, 5, false] }, { font: [] }],
@@ -128,7 +183,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       'color', 'background',
       'list',
       'indent', 'align',
-      'blockquote', 'code-block',
+      'blockquote', 'code-block', 'code-token',
       'link', 'image', 'video',
       'script',
       // table-better formats
@@ -204,7 +259,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       <ReactQuill
         ref={ref}
         theme="snow"
-        value={value}
+        value={safeValue}
         onChange={(html) => onChange(html)}
         readOnly={readOnly}
         placeholder={placeholder}
