@@ -14,13 +14,22 @@ if (typeof window !== 'undefined') {
   (window as any).hljs = hljs;
 }
 
-// Register the table module exactly once (HMR-safe).
+// Register the table module + all of its blots/formats exactly once
+// (HMR-safe). This MUST run before <ReactQuill> mounts, otherwise Quill
+// strips "table-better" from the formats whitelist (logging
+// "Cannot register 'table-better' specified in 'formats' config") and the
+// toolbar button silently does nothing.
 let tableRegistered = false;
 function ensureTableRegistered() {
   if (tableRegistered) return;
   Quill.register({ 'modules/table-better': QuillTableBetter }, true);
+  // Registers TableCell, TableRow, ..., and 'formats/table-better'.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (QuillTableBetter as any).register?.();
   tableRegistered = true;
 }
+// Register at module load so formats are available on first render.
+ensureTableRegistered();
 
 /**
  * Sanitize legacy table HTML so quill-table-better can parse it without
@@ -86,7 +95,6 @@ interface QuillEditorProps {
  * on click/focus inside the editable area.
  */
 export function QuillEditor({ value, onChange, readOnly = false, placeholder, hideToolbar = false }: QuillEditorProps) {
-  ensureTableRegistered();
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
@@ -186,8 +194,15 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       'blockquote', 'code-block', 'code-token',
       'link', 'image', 'video',
       'script',
-      // table-better formats
-      'table-better', 'table-cell-block', 'table-list', 'table-header',
+      // quill-table-better formats (NOT 'table-better' — that's a toolbar
+      // button, registered as 'formats/table-better' internally but not a
+      // user-facing format name).
+      'table-cell-block', 'table-th-block',
+      'table-cell', 'table-th',
+      'table-row', 'table-th-row',
+      'table-body', 'table-thead', 'table-temporary',
+      'table-container', 'table-col', 'table-colgroup',
+      'table-list', 'table-header',
     ],
     [],
   );
