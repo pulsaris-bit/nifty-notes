@@ -104,7 +104,12 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
 
   const imageHandler = useMemo(
     () => () => {
-      const editor = ref.current?.getEditor();
+      let editor: ReturnType<ReactQuill['getEditor']> | null = null;
+      try {
+        editor = ref.current?.getEditor() ?? null;
+      } catch {
+        return;
+      }
       if (!editor) return;
       const input = document.createElement('input');
       input.type = 'file';
@@ -208,9 +213,24 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
   );
 
   useEffect(() => {
-    const editor = ref.current?.getEditor();
-    if (!editor) return;
-    editor.enable(!readOnly);
+    const syncReadOnly = () => {
+      try {
+        const editor = ref.current?.getEditor();
+        if (!editor) return false;
+        editor.enable(!readOnly);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (syncReadOnly()) return;
+
+    const frame = requestAnimationFrame(() => {
+      syncReadOnly();
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [readOnly]);
 
   // Hide the toolbar when the user scrolls inside the editor; show it again
