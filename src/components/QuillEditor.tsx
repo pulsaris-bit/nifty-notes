@@ -152,6 +152,27 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
     editor.enable(!readOnly);
   }, [readOnly]);
 
+  // Strip HTML on paste: always insert clipboard content as plain text so
+  // pasted HTML markup doesn't leak styling/structure into the note.
+  useEffect(() => {
+    const editor = ref.current?.getEditor();
+    if (!editor) return;
+    const root: HTMLElement = editor.root;
+    const onPaste = (e: ClipboardEvent) => {
+      if (!e.clipboardData) return;
+      const text = e.clipboardData.getData('text/plain');
+      e.preventDefault();
+      const range = editor.getSelection(true) ?? { index: editor.getLength(), length: 0 };
+      if (range.length > 0) editor.deleteText(range.index, range.length, 'user');
+      if (text) {
+        editor.insertText(range.index, text, 'user');
+        editor.setSelection({ index: range.index + text.length, length: 0 });
+      }
+    };
+    root.addEventListener('paste', onPaste);
+    return () => root.removeEventListener('paste', onPaste);
+  }, []);
+
   // Hide the toolbar when the user scrolls inside the editor; show it again
   // on click / touch / focus inside the editable area.
   useEffect(() => {
