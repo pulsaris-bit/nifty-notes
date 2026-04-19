@@ -209,17 +209,24 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       const html = e.clipboardData.getData('text/html');
       const plainText = e.clipboardData.getData('text/plain');
       const text = html ? htmlToPlainText(html) || plainText : plainText;
+
+      // Always prevent default + stop Quill's own clipboard handler from
+      // running, otherwise it would also insert the (formatted) HTML and we'd
+      // end up with both the stripped plain text and the original markup.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
       if (!text) return;
 
-      e.preventDefault();
       const range = editor.getSelection(true) ?? { index: editor.getLength(), length: 0 };
       if (range.length > 0) editor.deleteText(range.index, range.length, 'user');
       editor.insertText(range.index, text, 'user');
       editor.setSelection({ index: range.index + text.length, length: 0 });
     };
 
-    root.addEventListener('paste', onPaste);
-    return () => root.removeEventListener('paste', onPaste);
+    // Use capture phase so we run before Quill's own paste listener.
+    root.addEventListener('paste', onPaste, true);
+    return () => root.removeEventListener('paste', onPaste, true);
   }, []);
 
   // Hide the toolbar when the user scrolls inside the editor; show it again
