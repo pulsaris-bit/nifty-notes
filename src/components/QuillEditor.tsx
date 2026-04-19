@@ -22,49 +22,6 @@ function ensureTableRegistered() {
   tableRegistered = true;
 }
 
-/**
- * Sanitize legacy table HTML so quill-table-better can parse it without
- * crashing.
- *
- * `quill-table-better` expects every <td>/<th> to expose `colspan`,
- * `rowspan` and `data-row` attributes. Notes created with Quill's native
- * table module (or pasted from elsewhere) often lack these, which causes
- * `TableCell.create(undefined)` to throw "Cannot read properties of
- * undefined (reading 'colspan')" on mount — leaving the user with a blank
- * white screen.
- *
- * We pre-process the HTML once on the way in: ensure every table cell has
- * the required attributes, and drop the now-meaningless wrapper attributes
- * the legacy module added.
- */
-function sanitizeTableHtml(html: string): string {
-  if (!html || (html.indexOf('<td') === -1 && html.indexOf('<th') === -1)) return html;
-  try {
-    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
-    const root = doc.body.firstElementChild as HTMLElement | null;
-    if (!root) return html;
-    const cells = root.querySelectorAll('td, th');
-    let rowCounter = 0;
-    cells.forEach((cell) => {
-      if (!cell.getAttribute('colspan')) cell.setAttribute('colspan', '1');
-      if (!cell.getAttribute('rowspan')) cell.setAttribute('rowspan', '1');
-      if (!cell.getAttribute('data-row')) {
-        // Group cells per <tr> under a shared synthetic row id.
-        const tr = cell.closest('tr');
-        let rid = tr?.getAttribute('data-quill-row') || '';
-        if (!rid) {
-          rid = `row-${Math.random().toString(36).slice(2, 6)}-${rowCounter++}`;
-          if (tr) tr.setAttribute('data-quill-row', rid);
-        }
-        cell.setAttribute('data-row', rid);
-      }
-    });
-    return root.innerHTML;
-  } catch {
-    return html;
-  }
-}
-
 interface QuillEditorProps {
   value: string;
   onChange: (html: string) => void;
@@ -90,9 +47,6 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
   const ref = useRef<ReactQuill>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [toolbarHidden, setToolbarHidden] = useState(false);
-
-  // Pre-clean any legacy table HTML so quill-table-better doesn't crash.
-  const safeValue = useMemo(() => sanitizeTableHtml(value ?? ''), [value]);
 
   const imageHandler = useMemo(
     () => () => {
@@ -198,6 +152,83 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
     editor.enable(!readOnly);
   }, [readOnly]);
 
+  // Strip HTML on paste: remove all tags and only keep the visible text.
+  useEffect(() => {
+    const editor = ref.current?.getEditor();
+    if (!editor) return;
+    const root: HTMLElement = editor.root;
+
+    const htmlToPlainText = (html: string) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const blockTags = new Set([
+        'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DIV', 'DL', 'DT', 'DD',
+        'FIELDSET', 'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'H1', 'H2', 'H3',
+        'H4', 'H5', 'H6', 'HEADER', 'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE',
+        'SECTION', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR', 'UL',
+      ]);
+      const parts: string[] = [];
+
+      const walk = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          parts.push(node.textContent ?? '');
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const el = node as HTMLElement;
+        if (el.tagName === 'BR') {
+          parts.push('\n');
+          return;
+        }
+        // <pre> often contains nested syntax-highlight spans whose text would
+        // otherwise be picked up twice (once via textContent on inner spans and
+        // again via the outer text). Use textContent once and stop recursing.
+        if (el.tagName === 'PRE') {
+          parts.push(el.textContent ?? '');
+          parts.push('\n');
+          return;
+        }
+        if (el.tagName === 'LI') parts.push('• ');
+
+        el.childNodes.forEach(walk);
+
+        if (blockTags.has(el.tagName)) parts.push('\n');
+      };
+
+      doc.body.childNodes.forEach(walk);
+
+      return parts
+        .join('')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trimEnd();
+    };
+
+    const onPaste = (e: ClipboardEvent) => {
+      if (!e.clipboardData) return;
+      const html = e.clipboardData.getData('text/html');
+      const plainText = e.clipboardData.getData('text/plain');
+      const text = html ? htmlToPlainText(html) || plainText : plainText;
+
+      // Always prevent default + stop Quill's own clipboard handler from
+      // running, otherwise it would also insert the (formatted) HTML and we'd
+      // end up with both the stripped plain text and the original markup.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      if (!text) return;
+
+      const range = editor.getSelection(true) ?? { index: editor.getLength(), length: 0 };
+      if (range.length > 0) editor.deleteText(range.index, range.length, 'user');
+      editor.insertText(range.index, text, 'user');
+      editor.setSelection({ index: range.index + text.length, length: 0 });
+    };
+
+    // Use capture phase so we run before Quill's own paste listener.
+    root.addEventListener('paste', onPaste, true);
+    return () => root.removeEventListener('paste', onPaste, true);
+  }, []);
+
   // Hide the toolbar when the user scrolls inside the editor; show it again
   // on click / touch / focus inside the editable area.
   useEffect(() => {
@@ -259,7 +290,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       <ReactQuill
         ref={ref}
         theme="snow"
-        value={safeValue}
+        value={value}
         onChange={(html) => onChange(html)}
         readOnly={readOnly}
         placeholder={placeholder}
