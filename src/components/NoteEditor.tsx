@@ -98,6 +98,19 @@ export function NoteEditor({
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
   }, [note?.id, isNewNote]);
 
+  // Track how many users this note is shared with so we can color the share button.
+  useEffect(() => {
+    if (!note || !isOwner || !listShares) {
+      setActiveShareCount(0);
+      return;
+    }
+    let cancelled = false;
+    listShares(note.id)
+      .then((s) => { if (!cancelled) setActiveShareCount(s.length); })
+      .catch(() => { if (!cancelled) setActiveShareCount(0); });
+    return () => { cancelled = true; };
+  }, [note?.id, isOwner, listShares, showShareDialog]);
+
   // If another user opens the note while we are editing, force view-mode and flush.
   useEffect(() => {
     if (lockedByOthers && mode === 'edit' && note) {
