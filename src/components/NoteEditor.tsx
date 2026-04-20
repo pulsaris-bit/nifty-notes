@@ -63,6 +63,7 @@ export function NoteEditor({
   const [unlockError, setUnlockError] = useState('');
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
+  const [activeShareCount, setActiveShareCount] = useState(0);
 
   const setMode = useCallback((next: 'edit' | 'view' | ((current: 'edit' | 'view') => 'edit' | 'view')) => {
     setModeRaw((current) => {
@@ -96,6 +97,19 @@ export function NoteEditor({
     // leaving a note must require the password again on return.
     setUnlocked((prev) => (prev.size === 0 ? prev : new Map()));
   }, [note?.id, isNewNote]);
+
+  // Track how many users this note is shared with so we can color the share button.
+  useEffect(() => {
+    if (!note || !isOwner || !listShares) {
+      setActiveShareCount(0);
+      return;
+    }
+    let cancelled = false;
+    listShares(note.id)
+      .then((s) => { if (!cancelled) setActiveShareCount(s.length); })
+      .catch(() => { if (!cancelled) setActiveShareCount(0); });
+    return () => { cancelled = true; };
+  }, [note?.id, isOwner, listShares, showShareDialog]);
 
   // If another user opens the note while we are editing, force view-mode and flush.
   useEffect(() => {
@@ -373,8 +387,11 @@ export function NoteEditor({
           {isOwner && !trashMode && !isLocked && shareNote && (
             <button
               onClick={() => setShowShareDialog(true)}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              title="Delen"
+              className={`p-1.5 rounded-md hover:bg-muted transition-colors ${
+                activeShareCount > 0 ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title={activeShareCount > 0 ? `Gedeeld met ${activeShareCount} gebruiker(s)` : 'Delen'}
+              aria-label="Delen"
             >
               <Share2 size={16} />
             </button>
