@@ -63,6 +63,7 @@ export function NoteEditor({
   const [unlockError, setUnlockError] = useState('');
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
+  const [activeShareCount, setActiveShareCount] = useState(0);
 
   const setMode = useCallback((next: 'edit' | 'view' | ((current: 'edit' | 'view') => 'edit' | 'view')) => {
     setModeRaw((current) => {
