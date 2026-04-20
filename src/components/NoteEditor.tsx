@@ -387,8 +387,11 @@ export function NoteEditor({
           {isOwner && !trashMode && !isLocked && shareNote && (
             <button
               onClick={() => setShowShareDialog(true)}
-              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              title="Delen"
+              className={`p-1.5 rounded-md hover:bg-muted transition-colors ${
+                activeShareCount > 0 ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+              title={activeShareCount > 0 ? `Gedeeld met ${activeShareCount} gebruiker(s)` : 'Delen'}
+              aria-label="Delen"
             >
               <Share2 size={16} />
             </button>
