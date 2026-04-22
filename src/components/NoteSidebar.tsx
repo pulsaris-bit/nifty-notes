@@ -158,12 +158,13 @@ export function NoteSidebar({
   return (
     <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
       <div className="px-4 pt-5 pb-3 flex items-center gap-2">
-        <BookOpen
-          size={22}
-          className="text-primary shrink-0"
+        <div
+          className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0"
           style={{ transform: 'rotate(5deg)' }}
           aria-hidden="true"
-        />
+        >
+          <BookOpen size={18} className="text-primary-foreground" />
+        </div>
         <h1 className="font-display text-xl text-sidebar-custom-fg-active tracking-wide">NiftyNotes</h1>
       </div>
 
