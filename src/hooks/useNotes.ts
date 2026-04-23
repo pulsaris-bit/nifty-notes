@@ -601,7 +601,7 @@ export function useNotes() {
   }, [remoteUpdate]);
 
   return {
-    notebooks, notes: sortedNotes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
     trashedCount: trashedNotes.length,
     sharedInboxCount,

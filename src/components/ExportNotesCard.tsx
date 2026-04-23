@@ -14,12 +14,15 @@ import { toast } from 'sonner';
 import { Note } from '@/types/notes';
 
 export function ExportNotesCard() {
-  const { notes, notebooks, dataLoaded } = useNotes();
+  const { allNotes, notebooks, dataLoaded } = useNotes();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
 
-  const activeNotes = useMemo(() => notes.filter((n) => !n.deletedAt), [notes]);
+  const activeNotes = useMemo(
+    () => allNotes.filter((n) => !n.deletedAt && !n.archived && n.permission === 'owner'),
+    [allNotes],
+  );
   const activeCount = activeNotes.length;
 
   // Group notes by notebook (preserve notebook order; orphans last)
