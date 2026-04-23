@@ -104,10 +104,6 @@ const Profile = () => {
           <ChangePasswordCard />
         </div>
 
-        <div className="mt-6">
-          <ExportNotesCard />
-        </div>
-
       </div>
     </div>
   );
