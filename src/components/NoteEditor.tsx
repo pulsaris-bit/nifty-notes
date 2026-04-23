@@ -398,6 +398,25 @@ export function NoteEditor({
               <Share2 size={16} />
             </button>
           )}
+          {/* Export as PDF — owner, not in trash, not in encrypted-locked state */}
+          {isOwner && !trashMode && !showLockedView && (
+            <button
+              onClick={async () => {
+                try {
+                  await exportNoteAsPdf(note, notebook, displayContent);
+                  toast.success('PDF gedownload');
+                } catch (e) {
+                  console.error('PDF export failed', e);
+                  toast.error('PDF exporteren mislukt');
+                }
+              }}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Exporteer als PDF"
+              aria-label="Exporteer als PDF"
+            >
+              <FileDown size={16} />
+            </button>
+          )}
           {/* Pick recipient notebook — only for shared notes that are still in the inbox */}
           {isShared && note.notebookId === '__shared__' && onPickSharedNotebook && (
             <button
