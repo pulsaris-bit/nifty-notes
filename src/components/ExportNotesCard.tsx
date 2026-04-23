@@ -20,7 +20,9 @@ export function ExportNotesCard() {
   const [query, setQuery] = useState('');
 
   const activeNotes = useMemo(
-    () => allNotes.filter((n) => !n.deletedAt && !n.archived && n.permission === 'owner'),
+    () => allNotes.filter(
+      (n) => !n.deletedAt && !n.archived && (n.permission ?? 'owner') === 'owner',
+    ),
     [allNotes],
   );
   const activeCount = activeNotes.length;
@@ -108,26 +110,28 @@ export function ExportNotesCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-normal">Notities exporteren</CardTitle>
-        <CardDescription>
-          Kies welke notities je wilt downloaden als Markdown-bestand.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            {dataLoaded
-              ? `${activeCount} actieve notitie(s) in ${notebooks.length} notebook(s).`
-              : 'Notities laden…'}
-          </p>
-          <Button onClick={openDialog} disabled={!dataLoaded || activeCount === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Notities kiezen…
-          </Button>
-        </div>
-      </CardContent>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-normal">Notities exporteren</CardTitle>
+          <CardDescription>
+            Kies welke notities je wilt downloaden als Markdown-bestand.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              {dataLoaded
+                ? `${activeCount} actieve notitie(s) in ${notebooks.length} notebook(s).`
+                : 'Notities laden…'}
+            </p>
+            <Button onClick={openDialog} disabled={!dataLoaded || activeCount === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Notities kiezen…
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
@@ -221,6 +225,6 @@ export function ExportNotesCard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
