@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
-import { ExportNotesCard } from '@/components/ExportNotesCard';
 import { getDiceBearAvatar } from '@/lib/avatar';
 import { toast } from 'sonner';
 
