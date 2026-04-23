@@ -20,7 +20,9 @@ export function ExportNotesCard() {
   const [query, setQuery] = useState('');
 
   const activeNotes = useMemo(
-    () => allNotes.filter((n) => !n.deletedAt && !n.archived && n.permission === 'owner'),
+    () => allNotes.filter(
+      (n) => !n.deletedAt && !n.archived && (n.permission ?? 'owner') === 'owner',
+    ),
     [allNotes],
   );
   const activeCount = activeNotes.length;
