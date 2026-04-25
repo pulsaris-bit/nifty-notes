@@ -15,7 +15,12 @@ import { recipientsForNote } from './lib/notes.js';
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: false }));
+// CORS: in production, default to "no cross-origin" so the API can only be used
+// from the same origin (the nginx-served SPA proxies /api). Override via CORS_ORIGIN.
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+  : (process.env.NODE_ENV === 'production' ? false : true);
+app.use(cors({ origin: corsOrigin, credentials: false }));
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', async (_req, res) => {
