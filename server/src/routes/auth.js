@@ -195,7 +195,7 @@ const changePasswordSchema = z.object({
   newPassword: strongPassword,
 });
 
-router.post('/change-password', requireAuth, async (req, res) => {
+router.post('/change-password', requireAuth, authLimiter, async (req, res) => {
   const parsed = changePasswordSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { currentPassword, newPassword } = parsed.data;
