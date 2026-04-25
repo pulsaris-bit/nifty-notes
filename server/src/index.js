@@ -15,7 +15,12 @@ import { recipientsForNote } from './lib/notes.js';
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: false }));
+// CORS: in production, default to "no cross-origin" so the API can only be used
+// from the same origin (the nginx-served SPA proxies /api). Override via CORS_ORIGIN.
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+  : (process.env.NODE_ENV === 'production' ? false : true);
+app.use(cors({ origin: corsOrigin, credentials: false }));
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', async (_req, res) => {
@@ -34,10 +39,17 @@ app.use('/api/users', userRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/uploads', uploadsRoutes);
 // Serve uploaded files (images embedded in notes). Long cache: filenames are unique.
+// Add X-Content-Type-Options: nosniff and a strict CSP so even if a malicious file
+// were ever served, the browser will not execute it as script.
 app.use('/api/uploads', express.static(UPLOADS_DIR, {
   maxAge: '30d',
   immutable: true,
   fallthrough: false,
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'");
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  },
 }));
 // Share routes register paths under /api (e.g. /api/notes/:id/shares and
 // /api/notes/shared-with-me/:id), so mount at /api.

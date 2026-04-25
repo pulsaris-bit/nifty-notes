@@ -39,22 +39,6 @@ export async function purgeOldTrash(userId) {
   }
 }
 
-async function attachLabels(notes, userId) {
-  if (notes.length === 0) return [];
-  const ids = notes.map((n) => n.id);
-  const links = await pool.query(
-    `SELECT note_id, label_id FROM note_labels
-     WHERE note_id = ANY($1::text[])`,
-    [ids],
-  );
-  const byNote = new Map();
-  for (const r of links.rows) {
-    if (!byNote.has(r.note_id)) byNote.set(r.note_id, []);
-    byNote.get(r.note_id).push(r.label_id);
-  }
-  return notes;
-}
-
 // Owner-only: notes the user owns (active or trashed depending on whereClause).
 export async function fetchOwnedNotes(userId, whereClause) {
   const notes = await pool.query(
@@ -64,7 +48,6 @@ export async function fetchOwnedNotes(userId, whereClause) {
     [userId],
   );
   if (notes.rows.length === 0) return [];
-  await attachLabels(notes.rows, userId);
   const ids = notes.rows.map((n) => n.id);
   const links = await pool.query(
     `SELECT note_id, label_id FROM note_labels WHERE note_id = ANY($1::text[])`,
