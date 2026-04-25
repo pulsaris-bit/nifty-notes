@@ -34,10 +34,17 @@ app.use('/api/users', userRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/uploads', uploadsRoutes);
 // Serve uploaded files (images embedded in notes). Long cache: filenames are unique.
+// Add X-Content-Type-Options: nosniff and a strict CSP so even if a malicious file
+// were ever served, the browser will not execute it as script.
 app.use('/api/uploads', express.static(UPLOADS_DIR, {
   maxAge: '30d',
   immutable: true,
   fallthrough: false,
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'");
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  },
 }));
 // Share routes register paths under /api (e.g. /api/notes/:id/shares and
 // /api/notes/shared-with-me/:id), so mount at /api.
