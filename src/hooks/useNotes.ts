@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { HAS_API, api, eventStreamUrl, getDeviceId } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
@@ -256,11 +256,20 @@ export function useNotes() {
       .then((data) => setPresence((prev) => ({ ...prev, [activeNoteId]: data.viewers || [] })))
       .catch(() => undefined);
 
-    const heartbeat = window.setInterval(() => {
+    // Heartbeat every 25s (server timeout is 45s). Pause while the tab is
+    // hidden to save CPU/battery — visibility change handler resumes immediately.
+    const ping = () => {
+      if (document.hidden) return;
       api('/events/presence/ping', { method: 'POST', body: { noteId: activeNoteId, deviceId: getDeviceId(), mode: activePresenceModeRef.current } })
         .catch(() => undefined);
-    }, 10_000);
-    return () => window.clearInterval(heartbeat);
+    };
+    const heartbeat = window.setInterval(ping, 25_000);
+    const onVisibility = () => { if (!document.hidden) ping(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [activeNoteId, activePresenceMode, syncPresence]);
 
   // Notify on tab close (best-effort).
@@ -279,54 +288,60 @@ export function useNotes() {
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);
 
-  // ---------- Selectors ----------
-  const activeNotes = notes.filter((n) => !n.deletedAt);
-  const trashedNotes = notes.filter((n) => !!n.deletedAt && n.permission === 'owner');
+  // ---------- Selectors (memoized to avoid re-computing on unrelated renders) ----------
+  const activeNotes = useMemo(() => notes.filter((n) => !n.deletedAt), [notes]);
+  const trashedNotes = useMemo(
+    () => notes.filter((n) => !!n.deletedAt && n.permission === 'owner'),
+    [notes],
+  );
 
-  const filteredNotes = (showTrash ? trashedNotes : activeNotes).filter((note) => {
-    if (showTrash) {
-      if (!searchQuery) return true;
-      return (
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.content.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    if (showArchived) return note.archived;
-    if (note.archived) return false;
-    const matchesNotebook = !activeNotebookId || note.notebookId === activeNotebookId;
-    const matchesLabel = !activeLabelId || note.labelIds.includes(activeLabelId);
-    const matchesSearch =
-      !searchQuery ||
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesNotebook && matchesLabel && matchesSearch;
-  });
+  const sortedNotes = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const base = showTrash ? trashedNotes : activeNotes;
+    const filtered = base.filter((note) => {
+      if (showTrash) {
+        if (!q) return true;
+        return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
+      }
+      if (showArchived) return note.archived;
+      if (note.archived) return false;
+      const matchesNotebook = !activeNotebookId || note.notebookId === activeNotebookId;
+      const matchesLabel = !activeLabelId || note.labelIds.includes(activeLabelId);
+      const matchesSearch =
+        !q || note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
+      return matchesNotebook && matchesLabel && matchesSearch;
+    });
+    return filtered.sort((a, b) => {
+      if (showTrash) return (b.deletedAt?.getTime() ?? 0) - (a.deletedAt?.getTime() ?? 0);
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return b.updatedAt.getTime() - a.updatedAt.getTime();
+    });
+  }, [activeNotes, trashedNotes, showTrash, showArchived, activeNotebookId, activeLabelId, searchQuery]);
 
-  const sortedNotes = [...filteredNotes].sort((a, b) => {
-    if (showTrash) {
-      return (b.deletedAt?.getTime() ?? 0) - (a.deletedAt?.getTime() ?? 0);
-    }
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return b.updatedAt.getTime() - a.updatedAt.getTime();
-  });
-
-  const activeNote = notes.find((n) => n.id === activeNoteId) || null;
+  const activeNote = useMemo(
+    () => notes.find((n) => n.id === activeNoteId) || null,
+    [notes, activeNoteId],
+  );
 
   // Count of notes that are shared with me but have no chosen notebook yet.
-  const sharedInboxCount = activeNotes.filter((n) => n.permission !== 'owner' && n.notebookId === SHARED_INBOX_ID).length;
+  const sharedInboxCount = useMemo(
+    () => activeNotes.filter((n) => n.permission !== 'owner' && n.notebookId === SHARED_INBOX_ID).length,
+    [activeNotes],
+  );
 
   // Robust counters computed from the FULL (unfiltered) active notes list,
   // so they don't drop to 0 when the user selects a notebook/label or searches.
   // Excludes archived and trashed notes — only "live" notes count.
-  const countableNotes = activeNotes.filter((n) => !n.archived);
-  const noteCountByNotebook: Record<string, number> = {};
-  const noteCountByLabel: Record<string, number> = {};
-  for (const n of countableNotes) {
-    noteCountByNotebook[n.notebookId] = (noteCountByNotebook[n.notebookId] || 0) + 1;
-    for (const lid of n.labelIds) {
-      noteCountByLabel[lid] = (noteCountByLabel[lid] || 0) + 1;
+  const { noteCountByNotebook, noteCountByLabel } = useMemo(() => {
+    const byNotebook: Record<string, number> = {};
+    const byLabel: Record<string, number> = {};
+    for (const n of activeNotes) {
+      if (n.archived) continue;
+      byNotebook[n.notebookId] = (byNotebook[n.notebookId] || 0) + 1;
+      for (const lid of n.labelIds) byLabel[lid] = (byLabel[lid] || 0) + 1;
     }
-  }
+    return { noteCountByNotebook: byNotebook, noteCountByLabel: byLabel };
+  }, [activeNotes]);
 
   const createNote = useCallback((notebookId?: string) => {
     const targetNotebookId = notebookId || activeNotebookId;
