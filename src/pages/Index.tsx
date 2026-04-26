@@ -26,6 +26,10 @@ const Index = () => {
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
   // Picker for placing a shared note into one of MY notebooks
   const [sharedPickerNoteId, setSharedPickerNoteId] = useState<string | null>(null);
+  // Bulk-action state
+  const [bulkMoveIds, setBulkMoveIds] = useState<string[] | null>(null);
+  const [bulkLabelIds, setBulkLabelIds] = useState<string[] | null>(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
   const { user } = useMockAuth();
 
   const {
