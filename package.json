@@ -55,6 +55,7 @@
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
     "quill-table-better": "^1.2.3",
@@ -71,6 +72,7 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "turndown": "^7.2.4",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
   },
@@ -82,6 +84,7 @@
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
