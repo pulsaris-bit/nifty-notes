@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
+import { BulkLabelDialog } from '@/components/BulkLabelDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
 import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
