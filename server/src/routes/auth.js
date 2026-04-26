@@ -1,10 +1,21 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { pool, withTx } from '../db.js';
 import { signToken, requireAuth } from '../auth.js';
 
 const router = Router();
+
+// Brute-force protection. Counts per IP — login/signup/change-password are
+// the highest-value endpoints to attack.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Te veel pogingen, probeer het over enkele minuten opnieuw.' },
+});
 
 // Modern password policy — keep in sync with src/lib/passwordPolicy.ts
 const strongPassword = z.string()
@@ -41,7 +52,7 @@ function buildUserPayload({ user, role, profile }) {
   };
 }
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { email, password, displayName } = parsed.data;
@@ -77,10 +88,13 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { email, password } = parsed.data;
+
+  // Generic message — do NOT reveal whether the email exists (user enumeration).
+  const GENERIC = 'Onjuiste inloggegevens.';
 
   try {
     const { rows } = await pool.query(
@@ -93,10 +107,12 @@ router.post('/login', async (req, res) => {
        WHERE lower(u.email) = lower($1) LIMIT 1`,
       [email],
     );
-    if (rows.length === 0) return res.status(401).json({ error: 'Geen account gevonden met dit e-mailadres.' });
+    // Always run bcrypt against a real-looking hash so attackers can't time-distinguish
+    // "no such user" from "wrong password".
+    const dummyHash = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8.Z1C6F1q9w0qYx5YqJxK8h7q3XbDa';
     const row = rows[0];
-    const ok = await bcrypt.compare(password, row.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Onjuist wachtwoord.' });
+    const ok = await bcrypt.compare(password, row?.password_hash || dummyHash);
+    if (!row || !ok) return res.status(401).json({ error: GENERIC });
 
     const token = signToken({ sub: row.id, role: row.role });
     res.json({
@@ -179,7 +195,7 @@ const changePasswordSchema = z.object({
   newPassword: strongPassword,
 });
 
-router.post('/change-password', requireAuth, async (req, res) => {
+router.post('/change-password', requireAuth, authLimiter, async (req, res) => {
   const parsed = changePasswordSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { currentPassword, newPassword } = parsed.data;

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import DOMPurify from 'dompurify';
 import { Note, Notebook } from '@/types/notes';
 
 /**
@@ -34,11 +35,19 @@ export async function exportNoteAsPdf(
   if (notebook) meta.push(`${notebook.icon ?? ''} ${notebook.name}`.trim());
   meta.push(`Bewerkt ${note.updatedAt.toLocaleString('nl-NL')}`);
 
+  // Sanitize the user-controlled HTML before injecting it. Without this, a note
+  // containing <script> or <img onerror=...> would execute in the page context.
+  const cleanContent = DOMPurify.sanitize(contentHtml || '<p><em>Lege notitie</em></p>', {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'style'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus'],
+  });
+
   container.innerHTML = `
     <h1 style="font-size:26px;margin:0 0 8px 0;font-weight:600;color:#111;">${safeTitle}</h1>
     <p style="margin:0 0 24px 0;color:#666;font-size:12px;">${meta.join(' · ')}</p>
     <hr style="border:none;border-top:1px solid #e5e5e5;margin:0 0 20px 0;" />
-    <div class="np-body">${contentHtml || '<p><em>Lege notitie</em></p>'}</div>
+    <div class="np-body">${cleanContent}</div>
   `;
 
   // Apply minimal print styles to common elements

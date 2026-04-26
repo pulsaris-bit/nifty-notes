@@ -54,7 +54,7 @@ export function QuillEditor({ value, onChange, readOnly = false, placeholder, hi
       if (!editor) return;
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
+      input.accept = 'image/png,image/jpeg,image/gif,image/webp';
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;

@@ -1,7 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'dev-only-change-me';
+const DEV_DEFAULT_SECRET = 'dev-only-change-me';
+const SECRET = process.env.JWT_SECRET || DEV_DEFAULT_SECRET;
 const EXPIRES = process.env.JWT_EXPIRES || '7d';
+
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || SECRET === DEV_DEFAULT_SECRET || SECRET.length < 32)) {
+  // Refuse to boot with a guessable signing key — would let anyone forge tokens.
+  throw new Error('JWT_SECRET must be set to a strong (>=32 char) random value in production');
+}
 
 export function signToken(payload) {
   return jwt.sign(payload, SECRET, { expiresIn: EXPIRES });

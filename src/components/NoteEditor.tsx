@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown } from 'lucide-react';
 import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { LabelPicker } from '@/components/LabelPicker';
@@ -78,8 +78,11 @@ export function NoteEditor({
   // Permissions derived from the note
   const isShared = !!note?.sharedBy;
   // Other users currently viewing this note (excluding ourselves).
-  const otherViewers = viewers.filter((v) => v.userId && v.userId !== currentUserId);
-  const editingViewers = otherViewers.filter((v) => v.isEditing);
+  const otherViewers = useMemo(
+    () => viewers.filter((v) => v.userId && v.userId !== currentUserId),
+    [viewers, currentUserId],
+  );
+  const editingViewers = useMemo(() => otherViewers.filter((v) => v.isEditing), [otherViewers]);
   const lockedByOthers = editingViewers.length > 0;
   const isReadOnly = trashMode || (isShared && note?.permission === 'read') || lockedByOthers;
   const isOwner = !isShared;
@@ -135,11 +138,19 @@ export function NoteEditor({
     prevModeRef.current = mode;
   }, [mode, note, onFlush, onRefetch]);
 
-  // Poll every 5s while in view-mode so remote changes show up even if SSE missed.
+  // While in view-mode, occasionally refetch so changes show up if SSE missed
+  // them. SSE is the primary channel — this is a safety net, so 30 s is plenty.
+  // The interval pauses while the tab is hidden to save CPU/battery.
   useEffect(() => {
     if (!note || mode !== 'view' || trashMode) return;
-    const id = window.setInterval(() => { onRefetch?.(note.id); }, 5000);
-    return () => window.clearInterval(id);
+    const tick = () => { if (!document.hidden) onRefetch?.(note.id); };
+    const id = window.setInterval(tick, 30_000);
+    const onVisibility = () => { if (!document.hidden) onRefetch?.(note.id); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [note, mode, trashMode, onRefetch]);
 
   const isLocked = !!note?.password;
