@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
+import { BulkLabelDialog } from '@/components/BulkLabelDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
 import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -24,6 +26,10 @@ const Index = () => {
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
   // Picker for placing a shared note into one of MY notebooks
   const [sharedPickerNoteId, setSharedPickerNoteId] = useState<string | null>(null);
+  // Bulk-action state
+  const [bulkMoveIds, setBulkMoveIds] = useState<string[] | null>(null);
+  const [bulkLabelIds, setBulkLabelIds] = useState<string[] | null>(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
   const { user } = useMockAuth();
 
   const {
@@ -39,6 +45,35 @@ const Index = () => {
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
+
+  // Notes resolved for bulk-label dialog (from current notes list).
+  const bulkLabelNotes = useMemo(
+    () => (bulkLabelIds ? notes.filter((n) => bulkLabelIds.includes(n.id)) : []),
+    [bulkLabelIds, notes],
+  );
+
+  const handleBulkMove = (targetNotebookId: string) => {
+    if (!bulkMoveIds) return;
+    for (const id of bulkMoveIds) updateNote(id, { notebookId: targetNotebookId });
+    setBulkMoveIds(null);
+  };
+
+  const handleBulkLabelApply = (labelId: string, action: 'add' | 'remove') => {
+    if (!bulkLabelIds) return;
+    for (const id of bulkLabelIds) {
+      const note = notes.find((n) => n.id === id);
+      if (!note) continue;
+      const has = note.labelIds.includes(labelId);
+      if (action === 'add' && !has) toggleNoteLabel(id, labelId);
+      else if (action === 'remove' && has) toggleNoteLabel(id, labelId);
+    }
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    if (!bulkDeleteIds) return;
+    for (const id of bulkDeleteIds) deleteNote(id);
+    setBulkDeleteIds(null);
+  };
 
   // Force the user to create their first notebook before they can do anything else.
   const mustCreateFirstNotebook = !!user && dataLoaded && notebooks.length === 0;
@@ -178,6 +213,9 @@ const Index = () => {
               trashMode={showTrash}
               presence={presence}
               currentUserId={user?.id}
+              onBulkMove={(ids) => setBulkMoveIds(ids)}
+              onBulkLabels={(ids) => setBulkLabelIds(ids)}
+              onBulkDelete={(ids) => setBulkDeleteIds(ids)}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -212,6 +250,9 @@ const Index = () => {
               trashMode={showTrash}
               presence={presence}
               currentUserId={user?.id}
+              onBulkMove={(ids) => setBulkMoveIds(ids)}
+              onBulkLabels={(ids) => setBulkLabelIds(ids)}
+              onBulkDelete={(ids) => setBulkDeleteIds(ids)}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -245,6 +286,9 @@ const Index = () => {
               trashMode={showTrash}
               presence={presence}
               currentUserId={user?.id}
+              onBulkMove={(ids) => setBulkMoveIds(ids)}
+              onBulkLabels={(ids) => setBulkLabelIds(ids)}
+              onBulkDelete={(ids) => setBulkDeleteIds(ids)}
             />
           ) : (
             <NoteEditor
@@ -282,6 +326,47 @@ const Index = () => {
         onPick={(nbId) => { if (sharedPickerNoteId) setSharedNoteNotebook(sharedPickerNoteId, nbId); setSharedPickerNoteId(null); }}
         onCreate={createNotebook}
       />
+
+      {/* Bulk: move multiple notes to a notebook */}
+      <SelectNotebookDialog
+        open={!!bulkMoveIds}
+        onOpenChange={(o) => { if (!o) setBulkMoveIds(null); }}
+        notebooks={notebooks}
+        onPick={handleBulkMove}
+        onCreate={createNotebook}
+      />
+
+      {/* Bulk: add/remove labels on multiple notes */}
+      <BulkLabelDialog
+        open={!!bulkLabelIds}
+        onOpenChange={(o) => { if (!o) setBulkLabelIds(null); }}
+        labels={labels}
+        notes={bulkLabelNotes}
+        onApply={handleBulkLabelApply}
+      />
+
+      {/* Bulk: delete confirmation */}
+      <AlertDialog open={!!bulkDeleteIds} onOpenChange={(o) => { if (!o) setBulkDeleteIds(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkDeleteIds?.length ?? 0} notitie{(bulkDeleteIds?.length ?? 0) === 1 ? '' : 's'} naar prullenbak?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              De geselecteerde notities verhuizen naar de prullenbak en worden na 30 dagen definitief verwijderd.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:opacity-90"
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
