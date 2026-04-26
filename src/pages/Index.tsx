@@ -46,6 +46,35 @@ const Index = () => {
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
   } = useNotes();
 
+  // Notes resolved for bulk-label dialog (from current notes list).
+  const bulkLabelNotes = useMemo(
+    () => (bulkLabelIds ? notes.filter((n) => bulkLabelIds.includes(n.id)) : []),
+    [bulkLabelIds, notes],
+  );
+
+  const handleBulkMove = (targetNotebookId: string) => {
+    if (!bulkMoveIds) return;
+    for (const id of bulkMoveIds) updateNote(id, { notebookId: targetNotebookId });
+    setBulkMoveIds(null);
+  };
+
+  const handleBulkLabelApply = (labelId: string, action: 'add' | 'remove') => {
+    if (!bulkLabelIds) return;
+    for (const id of bulkLabelIds) {
+      const note = notes.find((n) => n.id === id);
+      if (!note) continue;
+      const has = note.labelIds.includes(labelId);
+      if (action === 'add' && !has) toggleNoteLabel(id, labelId);
+      else if (action === 'remove' && has) toggleNoteLabel(id, labelId);
+    }
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    if (!bulkDeleteIds) return;
+    for (const id of bulkDeleteIds) deleteNote(id);
+    setBulkDeleteIds(null);
+  };
+
   // Force the user to create their first notebook before they can do anything else.
   const mustCreateFirstNotebook = !!user && dataLoaded && notebooks.length === 0;
 
