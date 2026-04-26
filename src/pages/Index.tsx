@@ -250,6 +250,9 @@ const Index = () => {
               trashMode={showTrash}
               presence={presence}
               currentUserId={user?.id}
+              onBulkMove={(ids) => setBulkMoveIds(ids)}
+              onBulkLabels={(ids) => setBulkLabelIds(ids)}
+              onBulkDelete={(ids) => setBulkDeleteIds(ids)}
             />
           </div>
           <div className="flex-1 min-w-0">
