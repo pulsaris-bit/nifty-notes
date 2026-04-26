@@ -10,9 +10,7 @@ export function BackupCard() {
   const { notes, notebooks, labels } = useNotes();
   const [busy, setBusy] = useState(false);
 
-  const exportable = notes.filter(
-    (n) => !n.deletedAt && (n.permission ?? 'owner') === 'owner',
-  );
+  const exportable = notes.filter((n) => !n.deletedAt);
 
   const handleDownload = async () => {
     if (exportable.length === 0) {
@@ -23,7 +21,7 @@ export function BackupCard() {
     try {
       const blob = await buildMarkdownBackup({ notes, notebooks, labels });
       downloadBlob(blob, backupFilename());
-      toast.success(`Backup gemaakt (${exportable.length} notities)`);
+      toast.success(`Backup gemaakt (${exportable.length} notities incl. bijlagen)`);
     } catch (err) {
       console.error(err);
       toast.error('Backup maken mislukt');
@@ -37,8 +35,9 @@ export function BackupCard() {
       <CardHeader>
         <CardTitle className="text-lg font-normal">Backup</CardTitle>
         <CardDescription>
-          Download al je notities als markdown-bestanden in een ZIP, geordend per notebook.
-          Vergrendelde notities worden in versleutelde vorm meegenomen.
+          Download al je notities (eigen én met jou gedeeld) als markdown-bestanden in een ZIP,
+          geordend per notebook. Bijlagen komen mee in een aparte map en blijven gelinkt vanuit
+          de markdown. Vergrendelde notities worden in versleutelde vorm meegenomen.
         </CardDescription>
       </CardHeader>
       <CardContent>
