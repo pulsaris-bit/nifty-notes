@@ -326,6 +326,47 @@ const Index = () => {
         onPick={(nbId) => { if (sharedPickerNoteId) setSharedNoteNotebook(sharedPickerNoteId, nbId); setSharedPickerNoteId(null); }}
         onCreate={createNotebook}
       />
+
+      {/* Bulk: move multiple notes to a notebook */}
+      <SelectNotebookDialog
+        open={!!bulkMoveIds}
+        onOpenChange={(o) => { if (!o) setBulkMoveIds(null); }}
+        notebooks={notebooks}
+        onPick={handleBulkMove}
+        onCreate={createNotebook}
+      />
+
+      {/* Bulk: add/remove labels on multiple notes */}
+      <BulkLabelDialog
+        open={!!bulkLabelIds}
+        onOpenChange={(o) => { if (!o) setBulkLabelIds(null); }}
+        labels={labels}
+        notes={bulkLabelNotes}
+        onApply={handleBulkLabelApply}
+      />
+
+      {/* Bulk: delete confirmation */}
+      <AlertDialog open={!!bulkDeleteIds} onOpenChange={(o) => { if (!o) setBulkDeleteIds(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkDeleteIds?.length ?? 0} notitie{(bulkDeleteIds?.length ?? 0) === 1 ? '' : 's'} naar prullenbak?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              De geselecteerde notities verhuizen naar de prullenbak en worden na 30 dagen definitief verwijderd.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:opacity-90"
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
