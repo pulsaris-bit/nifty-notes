@@ -44,6 +44,7 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
+    listVersions, restoreVersion,
   } = useNotes();
 
   // Notes resolved for bulk-label dialog (from current notes list).
