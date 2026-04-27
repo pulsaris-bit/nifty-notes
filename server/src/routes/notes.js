@@ -109,8 +109,10 @@ router.patch('/:id', async (req, res) => {
 
   try {
     // Determine permission: owner or shared write?
+    // Also fetch current title/content so we can snapshot the *previous*
+    // version when title or content actually changes.
     const { rows } = await pool.query(
-      `SELECT n.user_id AS owner_id, n.password,
+      `SELECT n.user_id AS owner_id, n.password, n.title, n.content,
               s.permission AS share_permission
          FROM notes n
          LEFT JOIN note_shares s ON s.note_id = n.id AND s.recipient_id = $2
@@ -147,7 +149,17 @@ router.patch('/:id', async (req, res) => {
       revokedShares = rowCount > 0;
     }
 
+    // Snapshot the previous (title, content) when either actually changes.
+    // We compare against the row read above to avoid pointless snapshots
+    // (debounced clients may PATCH content with the same value).
+    const titleChanged   = u.title !== undefined   && u.title   !== row.title;
+    const contentChanged = u.content !== undefined && u.content !== row.content;
+    const shouldSnapshot = titleChanged || contentChanged;
+
     await withTx(async (c) => {
+      if (shouldSnapshot) {
+        await snapshotNoteVersion(c, req.params.id, row.title, row.content);
+      }
       const fields = []; const values = []; let i = 1;
       if (u.title !== undefined)      { fields.push(`title = $${i++}`);       values.push(u.title); }
       if (u.content !== undefined)    { fields.push(`content = $${i++}`);     values.push(u.content); }
