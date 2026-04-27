@@ -434,6 +434,18 @@ export function NoteEditor({
               <FileDown size={16} />
             </button>
           )}
+          {/* Version history — owner only, hidden in trash. Works for locked notes too
+              (encrypted snapshots can be restored, but content stays encrypted). */}
+          {isOwner && !trashMode && listVersions && restoreVersion && (
+            <button
+              onClick={() => setShowVersionDialog(true)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Versiegeschiedenis (laatste 5)"
+              aria-label="Versiegeschiedenis"
+            >
+              <History size={16} />
+            </button>
+          )}
           {/* Pick recipient notebook — only for shared notes that are still in the inbox */}
           {isShared && note.notebookId === '__shared__' && onPickSharedNotebook && (
             <button
