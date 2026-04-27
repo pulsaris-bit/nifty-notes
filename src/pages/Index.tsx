@@ -235,6 +235,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -271,6 +272,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           </div>
         </div>
@@ -307,6 +309,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           )}
         </div>
