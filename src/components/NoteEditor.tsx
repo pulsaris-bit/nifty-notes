@@ -63,6 +63,7 @@ export function NoteEditor({
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [lockPassword, setLockPassword] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
   const [lockError, setLockError] = useState('');
