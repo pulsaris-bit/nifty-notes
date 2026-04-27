@@ -4,6 +4,33 @@
 import { pool } from '../db.js';
 
 export const TRASH_RETENTION_DAYS = 30;
+export const MAX_NOTE_VERSIONS = 5;
+
+/**
+ * Save a snapshot of the note's current (title, content) into note_versions
+ * and prune the history so only the newest MAX_NOTE_VERSIONS remain.
+ *
+ * Pass an existing pg client (from withTx) so the snapshot + prune happen
+ * in the same transaction as the actual UPDATE.
+ */
+export async function snapshotNoteVersion(client, noteId, title, content) {
+  await client.query(
+    `INSERT INTO note_versions (note_id, title, content) VALUES ($1, $2, $3)`,
+    [noteId, title ?? '', content ?? ''],
+  );
+  // Prune: keep only the MAX_NOTE_VERSIONS newest rows for this note.
+  await client.query(
+    `DELETE FROM note_versions
+      WHERE note_id = $1
+        AND id NOT IN (
+          SELECT id FROM note_versions
+           WHERE note_id = $1
+           ORDER BY created_at DESC, id DESC
+           LIMIT $2
+        )`,
+    [noteId, MAX_NOTE_VERSIONS],
+  );
+}
 
 export function rowToNote(row, labelIds, extra = {}) {
   return {
