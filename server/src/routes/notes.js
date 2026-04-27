@@ -5,6 +5,7 @@ import { requireAuth } from '../auth.js';
 import { publish } from '../lib/events.js';
 import {
   fetchOwnedNotes, fetchSharedWithMe, purgeOldTrash, recipientsForNote,
+  snapshotNoteVersion, MAX_NOTE_VERSIONS,
 } from '../lib/notes.js';
 
 const router = Router();
