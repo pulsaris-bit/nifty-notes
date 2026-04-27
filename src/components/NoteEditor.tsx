@@ -646,6 +646,17 @@ export function NoteEditor({
           removeShare={removeShare}
         />
       )}
+      {/* Version history dialog */}
+      {note && isOwner && listVersions && restoreVersion && (
+        <VersionHistoryDialog
+          open={showVersionDialog}
+          onOpenChange={setShowVersionDialog}
+          noteId={note.id}
+          isLocked={isLocked}
+          listVersions={listVersions}
+          restoreVersion={restoreVersion}
+        />
+      )}
     </motion.div>
   );
 }
