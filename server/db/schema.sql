@@ -105,3 +105,15 @@ CREATE TABLE IF NOT EXISTS note_shares (
 );
 CREATE INDEX IF NOT EXISTS note_shares_recipient_idx ON note_shares(recipient_id);
 CREATE INDEX IF NOT EXISTS note_shares_owner_idx ON note_shares(owner_id);
+
+-- ---------- Note versions (history) ----------
+-- Snapshots of (title, content) taken just before a note is updated.
+-- We keep at most 5 versions per note (oldest are pruned automatically).
+CREATE TABLE IF NOT EXISTS note_versions (
+  id         BIGSERIAL PRIMARY KEY,
+  note_id    TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL DEFAULT '',
+  content    TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS note_versions_note_id_idx ON note_versions(note_id, created_at DESC);

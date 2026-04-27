@@ -44,6 +44,7 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
+    listVersions, restoreVersion,
   } = useNotes();
 
   // Notes resolved for bulk-label dialog (from current notes list).
@@ -234,6 +235,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -270,6 +272,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           </div>
         </div>
@@ -306,6 +309,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
             />
           )}
         </div>

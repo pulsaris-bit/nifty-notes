@@ -5,6 +5,7 @@ import { requireAuth } from '../auth.js';
 import { publish } from '../lib/events.js';
 import {
   fetchOwnedNotes, fetchSharedWithMe, purgeOldTrash, recipientsForNote,
+  snapshotNoteVersion, MAX_NOTE_VERSIONS,
 } from '../lib/notes.js';
 
 const router = Router();
@@ -108,8 +109,10 @@ router.patch('/:id', async (req, res) => {
 
   try {
     // Determine permission: owner or shared write?
+    // Also fetch current title/content so we can snapshot the *previous*
+    // version when title or content actually changes.
     const { rows } = await pool.query(
-      `SELECT n.user_id AS owner_id, n.password,
+      `SELECT n.user_id AS owner_id, n.password, n.title, n.content,
               s.permission AS share_permission
          FROM notes n
          LEFT JOIN note_shares s ON s.note_id = n.id AND s.recipient_id = $2
@@ -146,7 +149,17 @@ router.patch('/:id', async (req, res) => {
       revokedShares = rowCount > 0;
     }
 
+    // Snapshot the previous (title, content) when either actually changes.
+    // We compare against the row read above to avoid pointless snapshots
+    // (debounced clients may PATCH content with the same value).
+    const titleChanged   = u.title !== undefined   && u.title   !== row.title;
+    const contentChanged = u.content !== undefined && u.content !== row.content;
+    const shouldSnapshot = titleChanged || contentChanged;
+
     await withTx(async (c) => {
+      if (shouldSnapshot) {
+        await snapshotNoteVersion(c, req.params.id, row.title, row.content);
+      }
       const fields = []; const values = []; let i = 1;
       if (u.title !== undefined)      { fields.push(`title = $${i++}`);       values.push(u.title); }
       if (u.content !== undefined)    { fields.push(`content = $${i++}`);     values.push(u.content); }
@@ -221,6 +234,79 @@ router.delete('/:id/permanent', async (req, res) => {
 router.post('/trash/purge', async (req, res) => {
   await purgeOldTrash(req.userId);
   res.json({ ok: true });
+});
+
+// ---------- Version history ----------
+// Helper: confirm the current user owns this note (only owners can view/restore versions).
+async function assertOwner(noteId, userId) {
+  const { rows } = await pool.query(
+    'SELECT 1 FROM notes WHERE id = $1 AND user_id = $2 LIMIT 1',
+    [noteId, userId],
+  );
+  return rows.length > 0;
+}
+
+// List stored versions (newest first). Capped at MAX_NOTE_VERSIONS by snapshot logic.
+router.get('/:id/versions', async (req, res) => {
+  if (!(await assertOwner(req.params.id, req.userId))) {
+    return res.status(404).json({ error: 'Note not found' });
+  }
+  const { rows } = await pool.query(
+    `SELECT id, title, content, created_at
+       FROM note_versions
+      WHERE note_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2`,
+    [req.params.id, MAX_NOTE_VERSIONS],
+  );
+  res.json(rows.map((r) => ({
+    id: String(r.id),
+    title: r.title,
+    content: r.content,
+    createdAt: r.created_at,
+  })));
+});
+
+// Restore a specific version → snapshot the current state first (so the
+// restore itself is undoable), then overwrite title/content with the version.
+router.post('/:id/versions/:versionId/restore', async (req, res) => {
+  if (!(await assertOwner(req.params.id, req.userId))) {
+    return res.status(404).json({ error: 'Note not found' });
+  }
+  const originDeviceId = req.headers['x-device-id'] || null;
+  try {
+    await withTx(async (c) => {
+      const { rows: vrows } = await c.query(
+        `SELECT title, content FROM note_versions WHERE id = $1 AND note_id = $2 LIMIT 1`,
+        [req.params.versionId, req.params.id],
+      );
+      if (vrows.length === 0) throw new Error('Version not found');
+      const { rows: nrows } = await c.query(
+        `SELECT title, content FROM notes WHERE id = $1 LIMIT 1`,
+        [req.params.id],
+      );
+      const cur = nrows[0];
+      const v = vrows[0];
+      if (cur && (cur.title !== v.title || cur.content !== v.content)) {
+        await snapshotNoteVersion(c, req.params.id, cur.title, cur.content);
+      }
+      await c.query(
+        `UPDATE notes SET title = $1, content = $2, updated_at = now() WHERE id = $3`,
+        [v.title, v.content, req.params.id],
+      );
+    });
+    const userIds = await recipientsForNote(req.params.id);
+    publish(userIds, {
+      type: 'note.updated',
+      noteId: req.params.id,
+      originDeviceId,
+      fields: ['title', 'content'],
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('restore version failed', e);
+    res.status(400).json({ error: e.message });
+  }
 });
 
 export default router;

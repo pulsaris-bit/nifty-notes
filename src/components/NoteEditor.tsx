@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown, History } from 'lucide-react';
 import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { LabelPicker } from '@/components/LabelPicker';
 import { format } from 'date-fns';
@@ -14,6 +14,7 @@ import {
   hashPassword, verifyPassword,
 } from '@/lib/noteCrypto';
 import { exportNoteAsPdf } from '@/lib/exportNotePdf';
+import { VersionHistoryDialog, type NoteVersion } from '@/components/VersionHistoryDialog';
 import { toast } from 'sonner';
 
 interface NoteEditorProps {
@@ -45,6 +46,9 @@ interface NoteEditorProps {
   onFlush?: (noteId: string) => void;
   onRefetch?: (noteId: string) => void;
   onModeChange?: (mode: 'view' | 'edit') => void;
+  // Version history (owner-only)
+  listVersions?: (noteId: string) => Promise<NoteVersion[]>;
+  restoreVersion?: (noteId: string, versionId: string) => Promise<void>;
 }
 
 export function NoteEditor({
@@ -53,11 +57,13 @@ export function NoteEditor({
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
   onFlush, onRefetch, onModeChange,
+  listVersions, restoreVersion,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [showLockDialog, setShowLockDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [lockPassword, setLockPassword] = useState('');
   const [lockConfirm, setLockConfirm] = useState('');
   const [lockError, setLockError] = useState('');
@@ -428,6 +434,18 @@ export function NoteEditor({
               <FileDown size={16} />
             </button>
           )}
+          {/* Version history — owner only, hidden in trash. Works for locked notes too
+              (encrypted snapshots can be restored, but content stays encrypted). */}
+          {isOwner && !trashMode && listVersions && restoreVersion && (
+            <button
+              onClick={() => setShowVersionDialog(true)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Versiegeschiedenis (laatste 5)"
+              aria-label="Versiegeschiedenis"
+            >
+              <History size={16} />
+            </button>
+          )}
           {/* Pick recipient notebook — only for shared notes that are still in the inbox */}
           {isShared && note.notebookId === '__shared__' && onPickSharedNotebook && (
             <button
@@ -626,6 +644,17 @@ export function NoteEditor({
           shareNote={shareNote}
           updateShare={updateShare}
           removeShare={removeShare}
+        />
+      )}
+      {/* Version history dialog */}
+      {note && isOwner && listVersions && restoreVersion && (
+        <VersionHistoryDialog
+          open={showVersionDialog}
+          onOpenChange={setShowVersionDialog}
+          noteId={note.id}
+          isLocked={isLocked}
+          listVersions={listVersions}
+          restoreVersion={restoreVersion}
         />
       )}
     </motion.div>
