@@ -46,6 +46,9 @@ interface NoteEditorProps {
   onFlush?: (noteId: string) => void;
   onRefetch?: (noteId: string) => void;
   onModeChange?: (mode: 'view' | 'edit') => void;
+  // Version history (owner-only)
+  listVersions?: (noteId: string) => Promise<NoteVersion[]>;
+  restoreVersion?: (noteId: string, versionId: string) => Promise<void>;
 }
 
 export function NoteEditor({
@@ -54,6 +57,7 @@ export function NoteEditor({
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
   onFlush, onRefetch, onModeChange,
+  listVersions, restoreVersion,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
