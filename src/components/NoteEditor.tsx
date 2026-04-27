@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown } from 'lucide-react';
+import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown, History } from 'lucide-react';
 import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
 import { LabelPicker } from '@/components/LabelPicker';
 import { format } from 'date-fns';
@@ -14,6 +14,7 @@ import {
   hashPassword, verifyPassword,
 } from '@/lib/noteCrypto';
 import { exportNoteAsPdf } from '@/lib/exportNotePdf';
+import { VersionHistoryDialog, type NoteVersion } from '@/components/VersionHistoryDialog';
 import { toast } from 'sonner';
 
 interface NoteEditorProps {
