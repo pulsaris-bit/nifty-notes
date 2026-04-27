@@ -10,7 +10,7 @@ import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
 import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { PanelLeftOpen, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Index = () => {
