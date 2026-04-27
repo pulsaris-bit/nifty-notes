@@ -615,6 +615,25 @@ export function useNotes() {
     }
   }, [remoteUpdate]);
 
+  // ---------- Version history ----------
+  const listVersions = useCallback(async (noteId: string) => {
+    if (!HAS_API) return [];
+    // Persist any in-flight textual edit before reading the version list, so
+    // it reflects the real current state of the note.
+    flushPendingPatch(noteId);
+    return await api<Array<{ id: string; title: string; content: string; createdAt: string }>>(
+      `/notes/${noteId}/versions`,
+    );
+  }, [flushPendingPatch]);
+
+  const restoreVersion = useCallback(async (noteId: string, versionId: string) => {
+    if (!HAS_API) return;
+    // Flush pending edits first; otherwise a debounced PATCH could overwrite the restore.
+    flushPendingPatch(noteId);
+    await api(`/notes/${noteId}/versions/${versionId}/restore`, { method: 'POST' });
+    await refetchNote(noteId);
+  }, [flushPendingPatch, refetchNote]);
+
   return {
     notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
@@ -634,5 +653,7 @@ export function useNotes() {
     flushPendingPatch, refetchNote,
     // sharing
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
+    // version history
+    listVersions, restoreVersion,
   };
 }
