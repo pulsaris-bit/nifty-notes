@@ -575,6 +575,18 @@ export function NoteEditor({
         </div>
       )}
 
+      {/* Attachments bar (documents) — hidden in locked view & trash */}
+      {!showLockedView && !trashMode && listAttachments && addAttachment && removeAttachment && (
+        <AttachmentsBar
+          noteId={note.id}
+          canEdit={!isReadOnly}
+          canDelete={isOwner && !isReadOnly}
+          listAttachments={listAttachments}
+          addAttachment={addAttachment}
+          removeAttachment={removeAttachment}
+        />
+      )}
+
       {showLockedView ? (
         /* Locked view */
         <div className="flex-1 flex items-center justify-center">
