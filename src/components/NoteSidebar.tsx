@@ -35,6 +35,8 @@ interface NoteSidebarProps {
   noteCountByNotebook: Record<string, number>;
   noteCountByLabel?: Record<string, number>;
   onCollapse: () => void;
+  width?: number;
+  onResize?: (width: number) => void;
 }
 
 export function NoteSidebar({
