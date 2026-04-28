@@ -3,7 +3,7 @@ import multer from 'multer';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { requireAuth } from '../auth.js';
+import { requireAuth, verifyToken } from '../auth.js';
 import { pool } from '../db.js';
 
 export const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads';
