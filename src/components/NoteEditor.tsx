@@ -63,6 +63,7 @@ export function NoteEditor({
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
   onFlush, onRefetch, onModeChange,
   listVersions, restoreVersion,
+  listAttachments, addAttachment, removeAttachment,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
