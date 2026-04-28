@@ -45,6 +45,7 @@ export function NoteSidebar({
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, noteCountByLabel = {}, onCollapse,
+  width, onResize,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
