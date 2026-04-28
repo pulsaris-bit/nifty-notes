@@ -634,6 +634,21 @@ export function useNotes() {
     await refetchNote(noteId);
   }, [flushPendingPatch, refetchNote]);
 
+  // ---------- Attachments (documents) ----------
+  const listAttachments = useCallback(async (noteId: string): Promise<NoteAttachment[]> => {
+    if (!HAS_API) return [];
+    return await api<NoteAttachment[]>(`/uploads/note/${noteId}`);
+  }, []);
+
+  const addAttachment = useCallback(async (noteId: string, file: File): Promise<NoteAttachment> => {
+    return await uploadAttachment(noteId, file);
+  }, []);
+
+  const removeAttachment = useCallback(async (noteId: string, attId: string): Promise<void> => {
+    if (!HAS_API) return;
+    await api(`/uploads/note/${noteId}/${attId}`, { method: 'DELETE' });
+  }, []);
+
   return {
     notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
