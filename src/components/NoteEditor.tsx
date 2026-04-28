@@ -15,6 +15,7 @@ import {
 } from '@/lib/noteCrypto';
 import { exportNoteAsPdf } from '@/lib/exportNotePdf';
 import { VersionHistoryDialog, type NoteVersion } from '@/components/VersionHistoryDialog';
+import { AttachmentsBar } from '@/components/AttachmentsBar';
 import { toast } from 'sonner';
 
 interface NoteEditorProps {
