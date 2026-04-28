@@ -44,11 +44,11 @@ const Profile = () => {
           <ArrowLeft className="w-4 h-4" /> Terug naar notities
         </Link>
 
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 overflow-hidden border border-border">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 overflow-hidden border border-border shrink-0">
             <img src={avatarSrc} alt={user.displayName} className="w-full h-full object-cover" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="font-display text-2xl text-foreground truncate">{user.displayName}</h1>
             <div className="flex items-center gap-2 mt-1">
               <span
@@ -63,6 +63,11 @@ const Profile = () => {
               </span>
               <span className="text-xs text-muted-foreground truncate">{user.email}</span>
             </div>
+          </div>
+          <div className="shrink-0 pl-2 border-l border-border self-stretch flex items-start">
+            <Button type="button" variant="outline" size="sm" onClick={logout} className="gap-1.5">
+              <LogOut className="w-4 h-4" /> Uitloggen
+            </Button>
           </div>
         </div>
 
@@ -91,10 +96,7 @@ const Profile = () => {
                 <Label>E-mailadres</Label>
                 <Input value={user.email} disabled />
               </div>
-              <div className="flex justify-between pt-2">
-                <Button type="button" variant="outline" onClick={logout}>
-                  Uitloggen
-                </Button>
+              <div className="flex justify-end pt-2">
                 <Button type="submit">Opslaan</Button>
               </div>
             </form>
