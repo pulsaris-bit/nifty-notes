@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
-import { HAS_API, api, eventStreamUrl, getDeviceId } from '@/lib/api';
+import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer, NoteAttachment } from '@/types/notes';
+import { HAS_API, api, eventStreamUrl, getDeviceId, uploadAttachment } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
 const LABEL_COLORS = [
