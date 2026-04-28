@@ -366,6 +366,16 @@ export function NoteSidebar({
 
       {/* User block + collapse button on the same line */}
       <UserBlock onCollapse={onCollapse} />
+      {/* Drag handle to resize the sidebar (desktop) */}
+      {onResize && (
+        <div
+          onMouseDown={onResizeMouseDown}
+          className="hidden md:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
+          title="Sleep om te verbreden"
+          aria-label="Zijbalk-breedte aanpassen"
+          role="separator"
+        />
+      )}
     </aside>
   );
 }
