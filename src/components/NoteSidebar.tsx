@@ -35,6 +35,8 @@ interface NoteSidebarProps {
   noteCountByNotebook: Record<string, number>;
   noteCountByLabel?: Record<string, number>;
   onCollapse: () => void;
+  width?: number;
+  onResize?: (width: number) => void;
 }
 
 export function NoteSidebar({
@@ -43,6 +45,7 @@ export function NoteSidebar({
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, noteCountByLabel = {}, onCollapse,
+  width, onResize,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
@@ -155,8 +158,36 @@ export function NoteSidebar({
     );
   };
 
+  // Drag-to-resize handle (desktop). Only enabled when onResize is provided.
+  const dragStartRef = useRef<{ startX: number; startW: number } | null>(null);
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    if (!onResize) return;
+    e.preventDefault();
+    dragStartRef.current = { startX: e.clientX, startW: width ?? 224 };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const next = dragStartRef.current.startW + (ev.clientX - dragStartRef.current.startX);
+      const clamped = Math.max(200, Math.min(420, next));
+      onResize(clamped);
+    };
+    const onUp = () => {
+      dragStartRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   return (
-    <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
+    <aside
+      className="shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none relative"
+      style={{ width: width ?? 224 }}
+    >
       <div className="px-4 pt-5 pb-3 flex items-center gap-2">
         <div
           className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0"
@@ -335,6 +366,16 @@ export function NoteSidebar({
 
       {/* User block + collapse button on the same line */}
       <UserBlock onCollapse={onCollapse} />
+      {/* Drag handle to resize the sidebar (desktop) */}
+      {onResize && (
+        <div
+          onMouseDown={onResizeMouseDown}
+          className="hidden md:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
+          title="Sleep om te verbreden"
+          aria-label="Zijbalk-breedte aanpassen"
+          role="separator"
+        />
+      )}
     </aside>
   );
 }

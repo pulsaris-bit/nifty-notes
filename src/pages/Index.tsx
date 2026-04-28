@@ -21,6 +21,14 @@ const Index = () => {
 
   // Desktop: persistent sidebar visibility. Tablet/Mobile: overlay drawer.
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 224;
+    const v = Number(localStorage.getItem('sidebarWidth'));
+    return v >= 200 && v <= 420 ? v : 224;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('sidebarWidth', String(sidebarWidth)); } catch {}
+  }, [sidebarWidth]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -152,6 +160,8 @@ const Index = () => {
         if (isDesktop) setDesktopSidebarVisible(false);
         else setDrawerOpen(false);
       }}
+      width={isDesktop ? sidebarWidth : undefined}
+      onResize={isDesktop ? setSidebarWidth : undefined}
     />
   );
 
