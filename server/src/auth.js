@@ -13,6 +13,11 @@ export function signToken(payload) {
   return jwt.sign(payload, SECRET, { expiresIn: EXPIRES });
 }
 
+/** Verify a JWT and return its payload (or throw). */
+export function verifyToken(token) {
+  return jwt.verify(token, SECRET);
+}
+
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;

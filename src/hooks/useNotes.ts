@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
-import { HAS_API, api, eventStreamUrl, getDeviceId } from '@/lib/api';
+import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer, NoteAttachment } from '@/types/notes';
+import { HAS_API, api, eventStreamUrl, getDeviceId, uploadAttachment } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
 const LABEL_COLORS = [
@@ -634,6 +634,21 @@ export function useNotes() {
     await refetchNote(noteId);
   }, [flushPendingPatch, refetchNote]);
 
+  // ---------- Attachments (documents) ----------
+  const listAttachments = useCallback(async (noteId: string): Promise<NoteAttachment[]> => {
+    if (!HAS_API) return [];
+    return await api<NoteAttachment[]>(`/uploads/note/${noteId}`);
+  }, []);
+
+  const addAttachment = useCallback(async (noteId: string, file: File): Promise<NoteAttachment> => {
+    return await uploadAttachment(noteId, file);
+  }, []);
+
+  const removeAttachment = useCallback(async (noteId: string, attId: string): Promise<void> => {
+    if (!HAS_API) return;
+    await api(`/uploads/note/${noteId}/${attId}`, { method: 'DELETE' });
+  }, []);
+
   return {
     notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
@@ -655,5 +670,7 @@ export function useNotes() {
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
     // version history
     listVersions, restoreVersion,
+    // attachments
+    listAttachments, addAttachment, removeAttachment,
   };
 }
