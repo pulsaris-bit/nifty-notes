@@ -134,6 +134,16 @@ export function MiniSidebar({
           </button>
         ))}
       </div>
+
+      {/* Expand button at the bottom */}
+      <div className="w-6 h-px bg-sidebar-custom-border my-1" />
+      <button
+        onClick={onExpand}
+        title="Zijbalk tonen"
+        className={`${baseBtn} ${inactive}`}
+      >
+        <PanelLeftOpen size={18} />
+      </button>
     </aside>
   );
 }
