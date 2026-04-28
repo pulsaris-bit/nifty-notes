@@ -54,14 +54,14 @@ export function MiniSidebar({
 
   return (
     <aside className="w-12 shrink-0 bg-sidebar-custom-bg flex flex-col items-center h-full select-none py-2 gap-1">
-      {/* Expand button (top, mirrors brand position) */}
-      <button
-        onClick={onExpand}
-        title="Zijbalk tonen"
-        className={`${baseBtn} ${inactive}`}
+      {/* Brand mark at top (mirrors NoteSidebar position) */}
+      <div
+        className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0"
+        style={{ transform: 'rotate(5deg)' }}
+        aria-hidden="true"
       >
-        <PanelLeftOpen size={18} />
-      </button>
+        <BookOpen size={18} className="text-primary-foreground" />
+      </div>
 
       <div className="w-6 h-px bg-sidebar-custom-border my-1" />
 
