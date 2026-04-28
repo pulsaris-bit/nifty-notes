@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NoteSidebar } from '@/components/NoteSidebar';
+import { MiniSidebar } from '@/components/MiniSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteEditor } from '@/components/NoteEditor';
 import { SelectNotebookDialog } from '@/components/SelectNotebookDialog';
@@ -9,7 +10,7 @@ import { useNotes, SHARED_INBOX_ID } from '@/hooks/useNotes';
 import { useMockAuth } from '@/hooks/useMockAuth';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { PanelLeftOpen, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Index = () => {
@@ -20,6 +21,14 @@ const Index = () => {
 
   // Desktop: persistent sidebar visibility. Tablet/Mobile: overlay drawer.
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 224;
+    const v = Number(localStorage.getItem('sidebarWidth'));
+    return v >= 200 && v <= 420 ? v : 224;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('sidebarWidth', String(sidebarWidth)); } catch {}
+  }, [sidebarWidth]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -44,6 +53,8 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
+    listVersions, restoreVersion,
+    listAttachments, addAttachment, removeAttachment,
   } = useNotes();
 
   // Notes resolved for bulk-label dialog (from current notes list).
@@ -150,6 +161,8 @@ const Index = () => {
         if (isDesktop) setDesktopSidebarVisible(false);
         else setDrawerOpen(false);
       }}
+      width={isDesktop ? sidebarWidth : undefined}
+      onResize={isDesktop ? setSidebarWidth : undefined}
     />
   );
 
@@ -161,18 +174,55 @@ const Index = () => {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* DESKTOP: persistent sidebar */}
+      {/* DESKTOP: persistent sidebar (full or mini icon rail) */}
       {isDesktop && desktopSidebarVisible && sidebar}
       {isDesktop && !desktopSidebarVisible && (
-        <div className="shrink-0 flex flex-col justify-end pb-3 pl-2 h-full">
-          <button
-            onClick={() => setDesktopSidebarVisible(true)}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            title="Zijbalk tonen"
-          >
-            <PanelLeftOpen className="w-5 h-5" />
-          </button>
-        </div>
+        <MiniSidebar
+          notebooks={notebooks}
+          labels={labels}
+          activeNotebookId={activeNotebookId}
+          activeLabelId={activeLabelId}
+          showArchived={showArchived}
+          showTrash={showTrash}
+          trashedCount={trashedCount}
+          sharedInboxCount={sharedInboxCount}
+          onSelectAll={() => {
+            setActiveNotebookId(null);
+            setActiveLabelId(null);
+            setShowArchived(false);
+            setShowTrash(false);
+          }}
+          onToggleArchived={() => {
+            setShowArchived(!showArchived);
+            setShowTrash(false);
+            setActiveNotebookId(null);
+            setActiveLabelId(null);
+          }}
+          onSelectShared={() => {
+            setActiveNotebookId('__shared__');
+            setShowTrash(false);
+          }}
+          onToggleTrash={() => {
+            setShowTrash(!showTrash);
+            setShowArchived(false);
+            setActiveNotebookId(null);
+            setActiveLabelId(null);
+            setActiveNoteId(null);
+          }}
+          onSelectNotebook={(id) => {
+            setActiveNotebookId(id);
+            setActiveLabelId(null);
+            setShowTrash(false);
+            setShowArchived(false);
+          }}
+          onSelectLabel={(id) => {
+            setActiveLabelId(id);
+            setActiveNotebookId(null);
+            setShowTrash(false);
+            setShowArchived(false);
+          }}
+          onExpand={() => setDesktopSidebarVisible(true)}
+        />
       )}
 
       {/* TABLET / MOBILE: overlay drawer */}
@@ -234,6 +284,8 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
+              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -270,6 +322,8 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
+              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           </div>
         </div>
@@ -306,6 +360,8 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
+              listVersions={listVersions} restoreVersion={restoreVersion}
+              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           )}
         </div>

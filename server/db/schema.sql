@@ -105,3 +105,31 @@ CREATE TABLE IF NOT EXISTS note_shares (
 );
 CREATE INDEX IF NOT EXISTS note_shares_recipient_idx ON note_shares(recipient_id);
 CREATE INDEX IF NOT EXISTS note_shares_owner_idx ON note_shares(owner_id);
+
+-- ---------- Note versions (history) ----------
+-- Snapshots of (title, content) taken just before a note is updated.
+-- We keep at most 5 versions per note (oldest are pruned automatically).
+CREATE TABLE IF NOT EXISTS note_versions (
+  id         BIGSERIAL PRIMARY KEY,
+  note_id    TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL DEFAULT '',
+  content    TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS note_versions_note_id_idx ON note_versions(note_id, created_at DESC);
+
+-- ---------- Note attachments ----------
+-- File metadata for documents (PDF/Word/etc.) attached to a note. The actual
+-- bytes live on disk in UPLOADS_DIR; this table only stores pointers.
+CREATE TABLE IF NOT EXISTS note_attachments (
+  id            TEXT PRIMARY KEY,
+  note_id       TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  filename      TEXT NOT NULL,            -- original user-facing filename
+  storage_name  TEXT NOT NULL,            -- on-disk filename inside UPLOADS_DIR
+  mime_type     TEXT NOT NULL,
+  size_bytes    BIGINT NOT NULL,
+  uploaded_by   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS note_attachments_note_id_idx ON note_attachments(note_id, created_at DESC);
+

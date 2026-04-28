@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, LogOut, Shield, User as UserIcon, Share2 } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, Tag, Pencil, PanelLeftClose, Archive, Shield, User as UserIcon, Share2 } from 'lucide-react';
 import { Notebook, Label } from '@/types/notes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMockAuth } from '@/hooks/useMockAuth';
@@ -35,6 +35,8 @@ interface NoteSidebarProps {
   noteCountByNotebook: Record<string, number>;
   noteCountByLabel?: Record<string, number>;
   onCollapse: () => void;
+  width?: number;
+  onResize?: (width: number) => void;
 }
 
 export function NoteSidebar({
@@ -43,6 +45,7 @@ export function NoteSidebar({
   onCreateNotebook, onUpdateNotebook, onDeleteNotebook,
   onCreateLabel, onUpdateLabel, onDeleteLabel,
   noteCountByNotebook, noteCountByLabel = {}, onCollapse,
+  width, onResize,
 }: NoteSidebarProps) {
   const [isCreatingNb, setIsCreatingNb] = useState(false);
   const [newNbName, setNewNbName] = useState('');
@@ -155,8 +158,36 @@ export function NoteSidebar({
     );
   };
 
+  // Drag-to-resize handle (desktop). Only enabled when onResize is provided.
+  const dragStartRef = useRef<{ startX: number; startW: number } | null>(null);
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    if (!onResize) return;
+    e.preventDefault();
+    dragStartRef.current = { startX: e.clientX, startW: width ?? 224 };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const next = dragStartRef.current.startW + (ev.clientX - dragStartRef.current.startX);
+      const clamped = Math.max(200, Math.min(420, next));
+      onResize(clamped);
+    };
+    const onUp = () => {
+      dragStartRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   return (
-    <aside className="w-56 shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none">
+    <aside
+      className="shrink-0 bg-sidebar-custom-bg flex flex-col h-full select-none relative"
+      style={{ width: width ?? 224 }}
+    >
       <div className="px-4 pt-5 pb-3 flex items-center gap-2">
         <div
           className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0"
@@ -333,54 +364,56 @@ export function NoteSidebar({
         </div>
       </div>
 
-      {/* User block */}
-      <UserBlock />
-
-      <div className="px-3 pb-3 pt-2 flex justify-end">
-        <button
-          onClick={onCollapse}
-          className="p-1.5 rounded-md hover:bg-sidebar-custom-bg-hover text-sidebar-custom-fg hover:text-sidebar-custom-fg-active transition-colors"
-          title="Zijbalk verbergen"
-        >
-          <PanelLeftClose className="w-4 h-4" />
-        </button>
-      </div>
+      {/* User block + collapse button on the same line */}
+      <UserBlock onCollapse={onCollapse} />
+      {/* Drag handle to resize the sidebar (desktop) */}
+      {onResize && (
+        <div
+          onMouseDown={onResizeMouseDown}
+          className="hidden md:block absolute top-0 right-0 h-full w-1.5 -mr-0.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
+          title="Sleep om te verbreden"
+          aria-label="Zijbalk-breedte aanpassen"
+          role="separator"
+        />
+      )}
     </aside>
   );
 }
 
-function UserBlock() {
-  const { user, logout } = useMockAuth();
+function UserBlock({ onCollapse }: { onCollapse: () => void }) {
+  const { user } = useMockAuth();
   if (!user) return null;
   const avatarSrc = user.avatarUrl || getDiceBearAvatar(user.email || user.displayName);
 
   return (
-    <div className="px-2 pt-2 pb-1 border-t border-sidebar-custom-border/40 mt-2">
-      <div className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-custom-accent/40 transition-colors group">
-        <Link to="/profile" className="flex items-center gap-2 flex-1 min-w-0" title="Profiel">
-          <div className="w-7 h-7 rounded-full bg-sidebar-custom-accent overflow-hidden shrink-0">
-            <img src={avatarSrc} alt={user.displayName} className="w-full h-full object-cover" />
+    <div className="px-2 pt-2 pb-3 border-t border-sidebar-custom-border/40 mt-2 flex items-center gap-1">
+      <Link
+        to="/profile"
+        className="flex-1 min-w-0 flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-custom-accent/40 transition-colors"
+        title="Profiel"
+      >
+        <div className="w-7 h-7 rounded-full bg-sidebar-custom-accent overflow-hidden shrink-0">
+          <img src={avatarSrc} alt={user.displayName} className="w-full h-full object-cover" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-sidebar-custom-fg-active truncate flex items-center gap-1">
+            {user.displayName}
+            {user.role === 'admin' && (
+              <Shield className="w-3 h-3 text-primary shrink-0" aria-label="Admin" />
+            )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs text-sidebar-custom-fg-active truncate flex items-center gap-1">
-              {user.displayName}
-              {user.role === 'admin' && (
-                <Shield className="w-3 h-3 text-primary shrink-0" aria-label="Admin" />
-              )}
-            </div>
-            <div className="text-[10px] text-sidebar-custom-fg/60 truncate">
-              {user.role === 'admin' ? 'Admin' : 'Gebruiker'}
-            </div>
+          <div className="text-[10px] text-sidebar-custom-fg/60 truncate">
+            {user.role === 'admin' ? 'Admin' : 'Gebruiker'}
           </div>
-        </Link>
-        <button
-          onClick={logout}
-          className="p-1.5 rounded-md text-sidebar-custom-fg/70 hover:text-sidebar-custom-fg-active hover:bg-sidebar-custom-bg transition-colors shrink-0"
-          title="Uitloggen"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
-      </div>
+        </div>
+      </Link>
+      <button
+        onClick={onCollapse}
+        className="p-1.5 rounded-md hover:bg-sidebar-custom-accent/60 text-sidebar-custom-fg hover:text-sidebar-custom-fg-active transition-colors shrink-0"
+        title="Zijbalk verbergen"
+      >
+        <PanelLeftClose className="w-4 h-4" />
+      </button>
     </div>
   );
 }

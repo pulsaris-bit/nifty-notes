@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer } from '@/types/notes';
-import { HAS_API, api, eventStreamUrl, getDeviceId } from '@/lib/api';
+import { Note, Notebook, Label, TRASH_RETENTION_DAYS, NoteShare, UserSearchResult, PresenceViewer, NoteAttachment } from '@/types/notes';
+import { HAS_API, api, eventStreamUrl, getDeviceId, uploadAttachment } from '@/lib/api';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
 const LABEL_COLORS = [
@@ -615,6 +615,40 @@ export function useNotes() {
     }
   }, [remoteUpdate]);
 
+  // ---------- Version history ----------
+  const listVersions = useCallback(async (noteId: string) => {
+    if (!HAS_API) return [];
+    // Persist any in-flight textual edit before reading the version list, so
+    // it reflects the real current state of the note.
+    flushPendingPatch(noteId);
+    return await api<Array<{ id: string; title: string; content: string; createdAt: string }>>(
+      `/notes/${noteId}/versions`,
+    );
+  }, [flushPendingPatch]);
+
+  const restoreVersion = useCallback(async (noteId: string, versionId: string) => {
+    if (!HAS_API) return;
+    // Flush pending edits first; otherwise a debounced PATCH could overwrite the restore.
+    flushPendingPatch(noteId);
+    await api(`/notes/${noteId}/versions/${versionId}/restore`, { method: 'POST' });
+    await refetchNote(noteId);
+  }, [flushPendingPatch, refetchNote]);
+
+  // ---------- Attachments (documents) ----------
+  const listAttachments = useCallback(async (noteId: string): Promise<NoteAttachment[]> => {
+    if (!HAS_API) return [];
+    return await api<NoteAttachment[]>(`/uploads/note/${noteId}`);
+  }, []);
+
+  const addAttachment = useCallback(async (noteId: string, file: File): Promise<NoteAttachment> => {
+    return await uploadAttachment(noteId, file);
+  }, []);
+
+  const removeAttachment = useCallback(async (noteId: string, attId: string): Promise<void> => {
+    if (!HAS_API) return;
+    await api(`/uploads/note/${noteId}/${attId}`, { method: 'DELETE' });
+  }, []);
+
   return {
     notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
@@ -634,5 +668,9 @@ export function useNotes() {
     flushPendingPatch, refetchNote,
     // sharing
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
+    // version history
+    listVersions, restoreVersion,
+    // attachments
+    listAttachments, addAttachment, removeAttachment,
   };
 }
