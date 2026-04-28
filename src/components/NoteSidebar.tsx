@@ -333,32 +333,22 @@ export function NoteSidebar({
         </div>
       </div>
 
-      {/* User block */}
-      <UserBlock />
-
-      <div className="px-3 pb-3 pt-2 flex justify-end">
-        <button
-          onClick={onCollapse}
-          className="p-1.5 rounded-md hover:bg-sidebar-custom-bg-hover text-sidebar-custom-fg hover:text-sidebar-custom-fg-active transition-colors"
-          title="Zijbalk verbergen"
-        >
-          <PanelLeftClose className="w-4 h-4" />
-        </button>
-      </div>
+      {/* User block + collapse button on the same line */}
+      <UserBlock onCollapse={onCollapse} />
     </aside>
   );
 }
 
-function UserBlock() {
+function UserBlock({ onCollapse }: { onCollapse: () => void }) {
   const { user } = useMockAuth();
   if (!user) return null;
   const avatarSrc = user.avatarUrl || getDiceBearAvatar(user.email || user.displayName);
 
   return (
-    <div className="px-2 pt-2 pb-1 border-t border-sidebar-custom-border/40 mt-2">
+    <div className="px-2 pt-2 pb-3 border-t border-sidebar-custom-border/40 mt-2 flex items-center gap-1">
       <Link
         to="/profile"
-        className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-custom-accent/40 transition-colors"
+        className="flex-1 min-w-0 flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-custom-accent/40 transition-colors"
         title="Profiel"
       >
         <div className="w-7 h-7 rounded-full bg-sidebar-custom-accent overflow-hidden shrink-0">
@@ -376,6 +366,13 @@ function UserBlock() {
           </div>
         </div>
       </Link>
+      <button
+        onClick={onCollapse}
+        className="p-1.5 rounded-md hover:bg-sidebar-custom-accent/60 text-sidebar-custom-fg hover:text-sidebar-custom-fg-active transition-colors shrink-0"
+        title="Zijbalk verbergen"
+      >
+        <PanelLeftClose className="w-4 h-4" />
+      </button>
     </div>
   );
 }
