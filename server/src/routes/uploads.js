@@ -193,8 +193,8 @@ router.post('/note/:noteId', requireAuth, docUpload.single('file'), async (req, 
 
 // Download a specific attachment (forces save dialog via Content-Disposition).
 // Token may be supplied via Authorization header OR ?token= query (so plain
+// Token may be supplied via Authorization header OR ?token= query (so plain
 // <a href> downloads work without custom fetch logic).
-import { verifyToken } from '../auth.js';
 router.get('/note/:noteId/:attId', async (req, res) => {
   // Manual auth: support query token for direct browser links
   let userId = null;
