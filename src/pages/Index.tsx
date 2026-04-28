@@ -160,6 +160,8 @@ const Index = () => {
         if (isDesktop) setDesktopSidebarVisible(false);
         else setDrawerOpen(false);
       }}
+      width={isDesktop ? sidebarWidth : undefined}
+      onResize={isDesktop ? setSidebarWidth : undefined}
     />
   );
 
