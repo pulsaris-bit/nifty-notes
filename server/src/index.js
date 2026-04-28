@@ -101,6 +101,17 @@ async function start() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )`);
     await pool.query("CREATE INDEX IF NOT EXISTS note_versions_note_id_idx ON note_versions(note_id, created_at DESC)");
+    await pool.query(`CREATE TABLE IF NOT EXISTS note_attachments (
+      id            TEXT PRIMARY KEY,
+      note_id       TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+      filename      TEXT NOT NULL,
+      storage_name  TEXT NOT NULL,
+      mime_type     TEXT NOT NULL,
+      size_bytes    BIGINT NOT NULL,
+      uploaded_by   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
+    await pool.query("CREATE INDEX IF NOT EXISTS note_attachments_note_id_idx ON note_attachments(note_id, created_at DESC)");
   } catch (e) {
     console.warn('migration warning:', e.message);
   }
