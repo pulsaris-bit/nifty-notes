@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Shield, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Shield, User as UserIcon, LogOut } from 'lucide-react';
 import { useMockAuth } from '@/hooks/useMockAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
