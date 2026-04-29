@@ -149,17 +149,14 @@ router.patch('/:id', async (req, res) => {
       revokedShares = rowCount > 0;
     }
 
-    // Snapshot the previous (title, content) when either actually changes.
-    // We compare against the row read above to avoid pointless snapshots
-    // (debounced clients may PATCH content with the same value).
-    const titleChanged   = u.title !== undefined   && u.title   !== row.title;
-    const contentChanged = u.content !== undefined && u.content !== row.content;
-    const shouldSnapshot = titleChanged || contentChanged;
+    // NOTE: We deliberately do NOT snapshot a version on every PATCH.
+    // Debounced clients fire many PATCHes while typing, which would flood the
+    // history with intermediate states. Instead the client calls
+    // POST /:id/versions/commit when the user leaves edit-mode (switches to
+    // view, opens another note, or unmounts the editor) to capture exactly
+    // one snapshot per editing session.
 
     await withTx(async (c) => {
-      if (shouldSnapshot) {
-        await snapshotNoteVersion(c, req.params.id, row.title, row.content);
-      }
       const fields = []; const values = []; let i = 1;
       if (u.title !== undefined)      { fields.push(`title = $${i++}`);       values.push(u.title); }
       if (u.content !== undefined)    { fields.push(`content = $${i++}`);     values.push(u.content); }
