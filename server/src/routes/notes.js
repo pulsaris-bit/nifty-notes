@@ -306,4 +306,38 @@ router.post('/:id/versions/:versionId/restore', async (req, res) => {
   }
 });
 
+// Commit the current note state as a new version. Called by the client when
+// the user leaves edit-mode (switch to view, open another note, close editor).
+// We compare against the most recent stored version and skip the snapshot if
+// nothing changed — avoids duplicate entries when the user toggles modes
+// without making edits.
+router.post('/:id/versions/commit', async (req, res) => {
+  if (!(await assertOwner(req.params.id, req.userId))) {
+    return res.status(404).json({ error: 'Note not found' });
+  }
+  try {
+    await withTx(async (c) => {
+      const { rows: nrows } = await c.query(
+        `SELECT title, content FROM notes WHERE id = $1 LIMIT 1`,
+        [req.params.id],
+      );
+      if (nrows.length === 0) throw new Error('Note not found');
+      const cur = nrows[0];
+      const { rows: vrows } = await c.query(
+        `SELECT title, content FROM note_versions
+          WHERE note_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
+        [req.params.id],
+      );
+      const last = vrows[0];
+      if (!last || last.title !== cur.title || last.content !== cur.content) {
+        await snapshotNoteVersion(c, req.params.id, cur.title, cur.content);
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('commit version failed', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
 export default router;
