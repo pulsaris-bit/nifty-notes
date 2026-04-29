@@ -63,7 +63,7 @@ export function NoteEditor({
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
   onFlush, onRefetch, onModeChange,
-  listVersions, restoreVersion,
+  listVersions, restoreVersion, commitVersion,
   listAttachments, addAttachment, removeAttachment,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
