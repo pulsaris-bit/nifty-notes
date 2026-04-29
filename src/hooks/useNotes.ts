@@ -634,6 +634,18 @@ export function useNotes() {
     await refetchNote(noteId);
   }, [flushPendingPatch, refetchNote]);
 
+  // Snapshot the current note as a version. Called when the user leaves
+  // edit-mode so each editing session yields exactly one history entry.
+  const commitVersion = useCallback(async (noteId: string) => {
+    if (!HAS_API) return;
+    // Make sure any debounced PATCH lands first so the snapshot reflects the
+    // latest edits, not a stale server-side state.
+    flushPendingPatch(noteId);
+    try {
+      await api(`/notes/${noteId}/versions/commit`, { method: 'POST' });
+    } catch { /* best-effort — never block UX on history */ }
+  }, [flushPendingPatch]);
+
   // ---------- Attachments (documents) ----------
   const listAttachments = useCallback(async (noteId: string): Promise<NoteAttachment[]> => {
     if (!HAS_API) return [];
