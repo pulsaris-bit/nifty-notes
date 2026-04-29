@@ -660,7 +660,7 @@ export function useNotes() {
   }, []);
 
   return {
-    notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    notebooks, notes: filteredNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
     trashedCount: trashedNotes.length,
     sharedInboxCount,
