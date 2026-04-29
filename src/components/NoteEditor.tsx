@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pin, PinOff, Trash2, FileText, Tag, Plus, X, Lock, LockOpen, ShieldCheck, Archive, ArchiveRestore, ArrowLeft, RotateCcw, Pencil, Eye, Share2, RefreshCw, LogOut, FolderInput, FileDown, History } from 'lucide-react';
 import { Note, Notebook, Label, NoteShare, UserSearchResult, PresenceViewer, NoteAttachment } from '@/types/notes';
 import { LabelPicker } from '@/components/LabelPicker';
@@ -79,6 +79,16 @@ export function NoteEditor({
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
   const [activeShareCount, setActiveShareCount] = useState(0);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize the title textarea only when the title actually changes
+  // (instead of on every render via a ref-callback that forced layout).
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [note?.id, note?.title]);
 
   const setMode = useCallback((next: 'edit' | 'view' | ((current: 'edit' | 'view') => 'edit' | 'view')) => {
     setModeRaw((current) => {
@@ -172,17 +182,20 @@ export function NoteEditor({
   // While in view-mode, occasionally refetch so changes show up if SSE missed
   // them. SSE is the primary channel — this is a safety net, so 30 s is plenty.
   // The interval pauses while the tab is hidden to save CPU/battery.
+  // Depend on note.id (not the whole object) so unrelated note re-renders
+  // don't tear down and rebuild the interval each time.
+  const noteIdForPoll = note?.id;
   useEffect(() => {
-    if (!note || mode !== 'view' || trashMode) return;
-    const tick = () => { if (!document.hidden) onRefetch?.(note.id); };
+    if (!noteIdForPoll || mode !== 'view' || trashMode) return;
+    const tick = () => { if (!document.hidden) onRefetch?.(noteIdForPoll); };
     const id = window.setInterval(tick, 30_000);
-    const onVisibility = () => { if (!document.hidden) onRefetch?.(note.id); };
+    const onVisibility = () => { if (!document.hidden) onRefetch?.(noteIdForPoll); };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [note, mode, trashMode, onRefetch]);
+  }, [noteIdForPoll, mode, trashMode, onRefetch]);
 
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
@@ -634,15 +647,11 @@ export function NoteEditor({
           {/* Title */}
           <div className="pt-6 pb-2 w-full" style={{ paddingLeft: 'max(24px, 4vw)', paddingRight: 'max(24px, 4vw)' }}>
             <textarea
+              ref={titleRef}
               value={note.title}
               onChange={(e) => onUpdate(note.id, { title: e.target.value })}
               onFocus={(e) => { if (e.target.value === 'Nieuwe notitie') { onUpdate(note.id, { title: '' }); } }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
-              ref={(el) => {
-                if (!el) return;
-                el.style.height = 'auto';
-                el.style.height = `${el.scrollHeight}px`;
-              }}
               rows={1}
               className="w-full font-display text-3xl font-normal bg-transparent outline-none placeholder:text-muted-foreground/40 resize-none overflow-hidden break-words leading-tight"
               placeholder="Titel..."

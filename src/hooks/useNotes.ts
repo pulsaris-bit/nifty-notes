@@ -295,10 +295,13 @@ export function useNotes() {
     [notes],
   );
 
-  const sortedNotes = useMemo(() => {
+  // Filtered (but NOT sorted) list — NoteList applies its own user-selected
+  // sort. Avoiding a second sort here keeps the work O(n) instead of O(n log n)
+  // on every state change.
+  const filteredNotes = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const base = showTrash ? trashedNotes : activeNotes;
-    const filtered = base.filter((note) => {
+    return base.filter((note) => {
       if (showTrash) {
         if (!q) return true;
         return note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
@@ -310,11 +313,6 @@ export function useNotes() {
       const matchesSearch =
         !q || note.title.toLowerCase().includes(q) || note.content.toLowerCase().includes(q);
       return matchesNotebook && matchesLabel && matchesSearch;
-    });
-    return filtered.sort((a, b) => {
-      if (showTrash) return (b.deletedAt?.getTime() ?? 0) - (a.deletedAt?.getTime() ?? 0);
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return b.updatedAt.getTime() - a.updatedAt.getTime();
     });
   }, [activeNotes, trashedNotes, showTrash, showArchived, activeNotebookId, activeLabelId, searchQuery]);
 
@@ -662,7 +660,7 @@ export function useNotes() {
   }, []);
 
   return {
-    notebooks, notes: sortedNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
+    notebooks, notes: filteredNotes, allNotes: notes, labels, activeNote, activeNotebookId, activeNoteId, activeLabelId,
     searchQuery, showArchived, showTrash, dataLoaded,
     trashedCount: trashedNotes.length,
     sharedInboxCount,
