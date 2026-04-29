@@ -50,6 +50,7 @@ interface NoteEditorProps {
   // Version history (owner-only)
   listVersions?: (noteId: string) => Promise<NoteVersion[]>;
   restoreVersion?: (noteId: string, versionId: string) => Promise<void>;
+  commitVersion?: (noteId: string) => Promise<void>;
   // Attachments (documents)
   listAttachments?: (noteId: string) => Promise<NoteAttachment[]>;
   addAttachment?: (noteId: string, file: File) => Promise<NoteAttachment>;
@@ -62,7 +63,7 @@ export function NoteEditor({
   currentUserId, viewers = [], remoteUpdate, onDismissRemoteUpdate,
   searchUsers, listShares, shareNote, updateShare, removeShare, onPickSharedNotebook,
   onFlush, onRefetch, onModeChange,
-  listVersions, restoreVersion,
+  listVersions, restoreVersion, commitVersion,
   listAttachments, addAttachment, removeAttachment,
 }: NoteEditorProps) {
   const [showLabelPicker, setShowLabelPicker] = useState(false);
@@ -137,18 +138,36 @@ export function NoteEditor({
   }, [lockedByOthers, mode, note, onFlush]);
 
   // When switching from edit → view, flush pending PATCH and refetch so the
-  // read view immediately reflects the saved state.
+  // read view immediately reflects the saved state. Also commit a version
+  // snapshot so each editing session yields exactly one history entry.
   const prevModeRef = useRef(mode);
   useEffect(() => {
     if (!note) { prevModeRef.current = mode; return; }
     if (prevModeRef.current === 'edit' && mode === 'view') {
       onFlush?.(note.id);
+      // commitVersion flushes too, but call onFlush first to be explicit.
+      void commitVersion?.(note.id);
       const t = window.setTimeout(() => onRefetch?.(note.id), 250);
       prevModeRef.current = mode;
       return () => window.clearTimeout(t);
     }
     prevModeRef.current = mode;
-  }, [mode, note, onFlush, onRefetch]);
+  }, [mode, note, onFlush, onRefetch, commitVersion]);
+
+  // Snapshot a version when leaving the editor (note switch / unmount) while
+  // still in edit-mode — otherwise that session would never get committed.
+  // We track the latest noteId+mode in refs so the cleanup runs with the
+  // values they had right before the change.
+  const editingRef = useRef<{ noteId: string | null; editing: boolean }>({ noteId: null, editing: false });
+  useEffect(() => {
+    editingRef.current = { noteId: note?.id ?? null, editing: mode === 'edit' };
+  }, [note?.id, mode]);
+  useEffect(() => {
+    return () => {
+      const { noteId, editing } = editingRef.current;
+      if (editing && noteId) void commitVersion?.(noteId);
+    };
+  }, [note?.id, commitVersion]);
 
   // While in view-mode, occasionally refetch so changes show up if SSE missed
   // them. SSE is the primary channel — this is a safety net, so 30 s is plenty.
