@@ -1,9 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, Plus, Pin, Lock, ArrowUpDown, PanelLeftOpen, Share2, CheckSquare, X, FolderInput, Tag, Trash2 } from 'lucide-react';
 import { Note, Notebook, Label, PresenceViewer } from '@/types/notes';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { isEncrypted } from '@/lib/noteCrypto';
+
+// Reusable HTML entity decoder — avoids creating a fresh <textarea> per note per render.
+const decoderEl = typeof document !== 'undefined' ? document.createElement('textarea') : null;
+function decodeHtmlEntities(s: string): string {
+  if (!decoderEl) return s;
+  decoderEl.innerHTML = s;
+  return decoderEl.value;
+}
 
 type SortOption = 'updatedAt' | 'createdAt' | 'title';
 
