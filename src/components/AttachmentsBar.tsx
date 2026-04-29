@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Paperclip, X, FileText, FileSpreadsheet, FileArchive, File as FileIcon, Download, Loader2 } from 'lucide-react';
 import type { NoteAttachment } from '@/types/notes';
-import { attachmentDownloadUrl } from '@/lib/api';
+import { attachmentDownloadUrl, HAS_API } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface AttachmentsBarProps {
@@ -142,10 +142,16 @@ export function AttachmentsBar({
             onChange={(e) => handleFiles(e.target.files)}
           />
           <button
-            onClick={handlePick}
+            onClick={() => {
+              if (!HAS_API) {
+                toast.error('Bijlagen werken alleen in de zelf-gehoste versie (backend niet bereikbaar in preview).');
+                return;
+              }
+              handlePick();
+            }}
             disabled={uploading}
             className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors disabled:opacity-50"
-            title="Bijlage toevoegen (PDF, Word, Excel, …)"
+            title={HAS_API ? 'Bijlage toevoegen (PDF, Word, Excel, …)' : 'Bijlagen vereisen de zelf-gehoste backend'}
           >
             {uploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
             Bijlage
