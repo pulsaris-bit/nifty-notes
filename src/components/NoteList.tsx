@@ -243,13 +243,12 @@ export function NoteList({
           sortedNotes.map((note) => {
             const encrypted = isEncrypted(note.content);
             // Strip HTML tags + decode entities + collapse whitespace for the list preview.
+            // Reuses a single <textarea> across all notes (see decodeHtmlEntities) → no
+            // new DOM nodes per render.
             const stripped = (note.content || '')
               .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
               .replace(/<[^>]+>/g, ' ');
-            const decoded = typeof window !== 'undefined'
-              ? (() => { const el = document.createElement('textarea'); el.innerHTML = stripped; return el.value; })()
-              : stripped;
-            const plain = decoded.replace(/\s+/g, ' ').trim();
+            const plain = decodeHtmlEntities(stripped).replace(/\s+/g, ' ').trim();
             const previewDisplay = encrypted ? '••••••••' : (plain || 'Lege notitie');
             const isOwned = (note.permission ?? 'owner') === 'owner';
             const isChecked = selected.has(note.id);
