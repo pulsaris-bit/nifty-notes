@@ -50,6 +50,7 @@ interface NoteEditorProps {
   // Version history (owner-only)
   listVersions?: (noteId: string) => Promise<NoteVersion[]>;
   restoreVersion?: (noteId: string, versionId: string) => Promise<void>;
+  commitVersion?: (noteId: string) => Promise<void>;
   // Attachments (documents)
   listAttachments?: (noteId: string) => Promise<NoteAttachment[]>;
   addAttachment?: (noteId: string, file: File) => Promise<NoteAttachment>;
