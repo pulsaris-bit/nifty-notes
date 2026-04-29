@@ -82,10 +82,19 @@ export function NoteSidebar({
     setEditingNbId(null); setShowEditEmojiPicker(false);
   };
 
-  const totalNotes = Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0);
+  const totalNotes = useMemo(
+    () => Object.values(noteCountByNotebook).reduce((a, b) => a + b, 0),
+    [noteCountByNotebook],
+  );
   const labelCount = (id: string) => noteCountByLabel[id] || 0;
-  const sortedNotebooks = [...notebooks].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }));
-  const sortedLabels = [...labels].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' }));
+  const sortedNotebooks = useMemo(
+    () => [...notebooks].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })),
+    [notebooks],
+  );
+  const sortedLabels = useMemo(
+    () => [...labels].sort((a, b) => a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' })),
+    [labels],
+  );
   const handleSelectAll = () => { onSelectNotebook(null); onSelectLabel(null); if (showArchived) onToggleArchived(); };
 
   // Emoji picker rendered via a portal in fixed positioning so it can break out
