@@ -681,7 +681,7 @@ export function useNotes() {
     // sharing
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
     // version history
-    listVersions, restoreVersion,
+    listVersions, restoreVersion, commitVersion,
     // attachments
     listAttachments, addAttachment, removeAttachment,
   };
