@@ -182,17 +182,20 @@ export function NoteEditor({
   // While in view-mode, occasionally refetch so changes show up if SSE missed
   // them. SSE is the primary channel — this is a safety net, so 30 s is plenty.
   // The interval pauses while the tab is hidden to save CPU/battery.
+  // Depend on note.id (not the whole object) so unrelated note re-renders
+  // don't tear down and rebuild the interval each time.
+  const noteIdForPoll = note?.id;
   useEffect(() => {
-    if (!note || mode !== 'view' || trashMode) return;
-    const tick = () => { if (!document.hidden) onRefetch?.(note.id); };
+    if (!noteIdForPoll || mode !== 'view' || trashMode) return;
+    const tick = () => { if (!document.hidden) onRefetch?.(noteIdForPoll); };
     const id = window.setInterval(tick, 30_000);
-    const onVisibility = () => { if (!document.hidden) onRefetch?.(note.id); };
+    const onVisibility = () => { if (!document.hidden) onRefetch?.(noteIdForPoll); };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [note, mode, trashMode, onRefetch]);
+  }, [noteIdForPoll, mode, trashMode, onRefetch]);
 
   const isLocked = !!note?.password;
   const unlockedEntry = note ? unlocked.get(note.id) : undefined;
