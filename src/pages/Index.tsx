@@ -53,7 +53,7 @@ const Index = () => {
     createLabel, updateLabel, deleteLabel, toggleNoteLabel,
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
-    listVersions, restoreVersion,
+    listVersions, restoreVersion, commitVersion,
     listAttachments, addAttachment, removeAttachment,
   } = useNotes();
 
@@ -284,7 +284,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
-              listVersions={listVersions} restoreVersion={restoreVersion}
+              listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
               listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           </ResizablePanel>
@@ -322,7 +322,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
-              listVersions={listVersions} restoreVersion={restoreVersion}
+              listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
               listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           </div>
@@ -360,7 +360,7 @@ const Index = () => {
               onPickSharedNotebook={(id) => setSharedPickerNoteId(id)}
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
-              listVersions={listVersions} restoreVersion={restoreVersion}
+              listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
               listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
             />
           )}
