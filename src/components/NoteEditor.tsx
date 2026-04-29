@@ -79,6 +79,16 @@ export function NoteEditor({
   const [mode, setModeRaw] = useState<'edit' | 'view'>(isNewNote ? 'edit' : 'view');
   const [unlocked, setUnlocked] = useState<Map<string, { password: string; content: string }>>(new Map());
   const [activeShareCount, setActiveShareCount] = useState(0);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize the title textarea only when the title actually changes
+  // (instead of on every render via a ref-callback that forced layout).
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [note?.id, note?.title]);
 
   const setMode = useCallback((next: 'edit' | 'view' | ((current: 'edit' | 'view') => 'edit' | 'view')) => {
     setModeRaw((current) => {
