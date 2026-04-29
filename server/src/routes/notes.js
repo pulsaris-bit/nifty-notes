@@ -149,17 +149,14 @@ router.patch('/:id', async (req, res) => {
       revokedShares = rowCount > 0;
     }
 
-    // Snapshot the previous (title, content) when either actually changes.
-    // We compare against the row read above to avoid pointless snapshots
-    // (debounced clients may PATCH content with the same value).
-    const titleChanged   = u.title !== undefined   && u.title   !== row.title;
-    const contentChanged = u.content !== undefined && u.content !== row.content;
-    const shouldSnapshot = titleChanged || contentChanged;
+    // NOTE: We deliberately do NOT snapshot a version on every PATCH.
+    // Debounced clients fire many PATCHes while typing, which would flood the
+    // history with intermediate states. Instead the client calls
+    // POST /:id/versions/commit when the user leaves edit-mode (switches to
+    // view, opens another note, or unmounts the editor) to capture exactly
+    // one snapshot per editing session.
 
     await withTx(async (c) => {
-      if (shouldSnapshot) {
-        await snapshotNoteVersion(c, req.params.id, row.title, row.content);
-      }
       const fields = []; const values = []; let i = 1;
       if (u.title !== undefined)      { fields.push(`title = $${i++}`);       values.push(u.title); }
       if (u.content !== undefined)    { fields.push(`content = $${i++}`);     values.push(u.content); }
@@ -305,6 +302,40 @@ router.post('/:id/versions/:versionId/restore', async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error('restore version failed', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Commit the current note state as a new version. Called by the client when
+// the user leaves edit-mode (switch to view, open another note, close editor).
+// We compare against the most recent stored version and skip the snapshot if
+// nothing changed — avoids duplicate entries when the user toggles modes
+// without making edits.
+router.post('/:id/versions/commit', async (req, res) => {
+  if (!(await assertOwner(req.params.id, req.userId))) {
+    return res.status(404).json({ error: 'Note not found' });
+  }
+  try {
+    await withTx(async (c) => {
+      const { rows: nrows } = await c.query(
+        `SELECT title, content FROM notes WHERE id = $1 LIMIT 1`,
+        [req.params.id],
+      );
+      if (nrows.length === 0) throw new Error('Note not found');
+      const cur = nrows[0];
+      const { rows: vrows } = await c.query(
+        `SELECT title, content FROM note_versions
+          WHERE note_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
+        [req.params.id],
+      );
+      const last = vrows[0];
+      if (!last || last.title !== cur.title || last.content !== cur.content) {
+        await snapshotNoteVersion(c, req.params.id, cur.title, cur.content);
+      }
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('commit version failed', e);
     res.status(400).json({ error: e.message });
   }
 });
