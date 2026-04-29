@@ -43,22 +43,35 @@ export function NoteList({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const getNotebookName = (id: string) => notebooks.find((nb) => nb.id === id)?.name || '';
-  const getLabel = (id: string) => labels.find((l) => l.id === id);
+  // O(1) lookups for notebook/label by id (instead of .find() per note per render).
+  const notebookNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const nb of notebooks) m.set(nb.id, nb.name);
+    return m;
+  }, [notebooks]);
+  const labelById = useMemo(() => {
+    const m = new Map<string, Label>();
+    for (const l of labels) m.set(l.id, l);
+    return m;
+  }, [labels]);
+  const getNotebookName = (id: string) => notebookNameById.get(id) || '';
+  const getLabel = (id: string) => labelById.get(id);
 
-  const sortedNotes = [...notes].sort((a, b) => {
-    // Pinned notes always first
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    switch (sortBy) {
-      case 'title':
-        return a.title.localeCompare(b.title, 'nl');
-      case 'createdAt':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case 'updatedAt':
-      default:
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    }
-  });
+  const sortedNotes = useMemo(() => {
+    return [...notes].sort((a, b) => {
+      // Pinned notes always first
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title, 'nl');
+        case 'createdAt':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'updatedAt':
+        default:
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+    });
+  }, [notes, sortBy]);
 
   const sortLabels: Record<SortOption, string> = {
     updatedAt: 'Laatst bijgewerkt',
