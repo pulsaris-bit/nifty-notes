@@ -8,6 +8,7 @@ import shareRoutes from './routes/shares.js';
 import userRoutes from './routes/users.js';
 import eventsRoutes from './routes/events.js';
 import uploadsRoutes, { UPLOADS_DIR } from './routes/uploads.js';
+import adminRoutes from './routes/admin.js';
 import { pool } from './db.js';
 import { startPresenceSweeper } from './lib/events.js';
 import { recipientsForNote } from './lib/notes.js';
@@ -33,6 +34,7 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/users', userRoutes);

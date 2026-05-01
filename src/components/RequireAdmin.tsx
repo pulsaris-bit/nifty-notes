@@ -2,7 +2,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useMockAuth } from '@/hooks/useMockAuth';
 
-export function RequireAuth({ children }: { children: JSX.Element }) {
+/** Gates a route to admin users only. Non-admins are sent to /. */
+export function RequireAdmin({ children }: { children: JSX.Element }) {
   const { user, loading } = useMockAuth();
   const location = useLocation();
 
@@ -13,16 +14,7 @@ export function RequireAuth({ children }: { children: JSX.Element }) {
       </div>
     );
   }
-
-  if (!user) {
-    return <Navigate to="/auth" replace state={{ from: location }} />;
-  }
-
-  // Admins must not access the notes app — redirect them to /admin.
-  // (The /admin route itself uses RequireAdmin, not RequireAuth.)
-  if (user.role === 'admin' && location.pathname !== '/admin' && location.pathname !== '/profile') {
-    return <Navigate to="/admin" replace />;
-  }
-
+  if (!user) return <Navigate to="/auth" replace state={{ from: location }} />;
+  if (user.role !== 'admin') return <Navigate to="/" replace />;
   return children;
 }

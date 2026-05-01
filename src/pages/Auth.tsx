@@ -54,7 +54,7 @@ const Auth = () => {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={user.role === 'admin' ? '/admin' : '/'} replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +76,7 @@ const Auth = () => {
       return;
     }
     toast.success('Welkom terug!');
-    navigate('/');
+    // Navigate happens via the <Navigate> guard above once `user` is set.
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -99,7 +99,7 @@ const Auth = () => {
       return;
     }
     toast.success('Account aangemaakt!');
-    navigate('/');
+    // Navigate happens via the <Navigate> guard above.
   };
 
   return (
