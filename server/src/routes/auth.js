@@ -88,7 +88,8 @@ router.post('/signup', authLimiter, async (req, res) => {
   }
 });
 
-router.post('/login', authLimiter, async (req, res) => {
+// Shared login handler. `mode` is 'user' (rejects admins) or 'admin' (only admins).
+async function handleLogin(req, res, mode) {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
   const { email, password } = parsed.data;
