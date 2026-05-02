@@ -115,6 +115,14 @@ async function handleLogin(req, res, mode) {
     const ok = await bcrypt.compare(password, row?.password_hash || dummyHash);
     if (!row || !ok) return res.status(401).json({ error: GENERIC });
 
+    // Enforce login surface: regular login refuses admins, admin login refuses non-admins.
+    if (mode === 'user' && row.role === 'admin') {
+      return res.status(403).json({ error: 'Beheerders moeten inloggen via /admin/login.' });
+    }
+    if (mode === 'admin' && row.role !== 'admin') {
+      return res.status(403).json({ error: GENERIC });
+    }
+
     const token = signToken({ sub: row.id, role: row.role });
     res.json({
       token,
@@ -133,6 +141,57 @@ async function handleLogin(req, res, mode) {
   } catch (e) {
     console.error('login error', e);
     res.status(500).json({ error: 'Server error' });
+  }
+}
+
+router.post('/login', authLimiter, (req, res) => handleLogin(req, res, 'user'));
+router.post('/admin-login', authLimiter, (req, res) => handleLogin(req, res, 'admin'));
+
+// Bootstrap: create the first admin if none exists yet. Self-disables once an admin exists.
+router.post('/bootstrap-admin', authLimiter, async (req, res) => {
+  const parsed = signupSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { email, password, displayName } = parsed.data;
+  try {
+    const { rows: [{ count }] } = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM user_roles WHERE role = 'admin'",
+    );
+    if (count > 0) return res.status(403).json({ error: 'Er bestaat al een beheerder. Bootstrap is uitgeschakeld.' });
+
+    const existing = await pool.query('SELECT id FROM users WHERE lower(email) = lower($1)', [email]);
+    if (existing.rowCount > 0) return res.status(409).json({ error: 'Er bestaat al een account met dit e-mailadres.' });
+
+    const hash = await bcrypt.hash(password, 10);
+    const result = await withTx(async (c) => {
+      const { rows: [user] } = await c.query(
+        'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, created_at',
+        [email, hash],
+      );
+      await c.query("INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin')", [user.id]);
+      const { rows: [profile] } = await c.query(
+        `INSERT INTO profiles (user_id, display_name) VALUES ($1, $2)
+         RETURNING display_name, avatar_url, bio, theme, language`,
+        [user.id, displayName],
+      );
+      return { user, role: 'admin', profile };
+    });
+    const token = signToken({ sub: result.user.id, role: 'admin' });
+    res.json({ token, user: buildUserPayload(result) });
+  } catch (e) {
+    console.error('bootstrap-admin error', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Tells the admin-login page whether bootstrap is still possible.
+router.get('/bootstrap-admin/available', async (_req, res) => {
+  try {
+    const { rows: [{ count }] } = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM user_roles WHERE role = 'admin'",
+    );
+    res.json({ available: count === 0 });
+  } catch {
+    res.json({ available: false });
   }
 });
 
