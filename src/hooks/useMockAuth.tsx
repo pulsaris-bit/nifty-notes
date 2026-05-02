@@ -23,6 +23,8 @@ interface AuthContextValue {
   user: MockUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
+  adminLogin: (email: string, password: string) => Promise<{ error?: string }>;
+  bootstrapAdmin: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => void;
