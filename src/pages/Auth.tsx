@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { BookOpen, Loader2 } from 'lucide-react';
@@ -231,6 +231,13 @@ const Auth = () => {
             </Tabs>
           </CardHeader>
         </Card>
+
+        <p className="mt-4 text-center text-xs" style={{ color: 'hsl(var(--sidebar-fg))' }}>
+          Beheerder?{' '}
+          <Link to="/admin/login" className="underline underline-offset-2 hover:text-primary">
+            Log hier in
+          </Link>
+        </p>
       </motion.div>
     </div>
   );

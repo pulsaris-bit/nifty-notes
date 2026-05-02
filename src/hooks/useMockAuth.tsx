@@ -23,6 +23,8 @@ interface AuthContextValue {
   user: MockUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
+  adminLogin: (email: string, password: string) => Promise<{ error?: string }>;
+  bootstrapAdmin: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<MockUser, 'displayName' | 'avatarUrl' | 'bio' | 'theme' | 'language'>>) => void;
@@ -107,6 +109,58 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     if (found.password !== password) return { error: 'Onjuist wachtwoord.' };
     localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: found.id }));
     setUser(stripPassword(found));
+    return {};
+  }, []);
+
+  const adminLogin = useCallback(async (email: string, password: string) => {
+    if (HAS_API) {
+      try {
+        const { token, user: u } = await api<{ token: string; user: MockUser }>('/auth/admin-login', {
+          method: 'POST', body: { email, password }, auth: false,
+        });
+        setToken(token);
+        setUser(u);
+        return {};
+      } catch (e) {
+        return { error: e instanceof ApiError ? e.message : 'Inloggen mislukt' };
+      }
+    }
+    // Mock fallback: same store, but require role 'admin'.
+    const users = readUsers();
+    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!found || found.password !== password) return { error: 'Onjuiste inloggegevens.' };
+    if (found.role !== 'admin') return { error: 'Onjuiste inloggegevens.' };
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: found.id }));
+    setUser(stripPassword(found));
+    return {};
+  }, []);
+
+  const bootstrapAdmin = useCallback(async (email: string, password: string, displayName: string) => {
+    if (HAS_API) {
+      try {
+        const { token, user: u } = await api<{ token: string; user: MockUser }>('/auth/bootstrap-admin', {
+          method: 'POST', body: { email, password, displayName }, auth: false,
+        });
+        setToken(token);
+        setUser(u);
+        return {};
+      } catch (e) {
+        return { error: e instanceof ApiError ? e.message : 'Aanmaken beheerder mislukt' };
+      }
+    }
+    const users = readUsers();
+    if (users.some((u) => u.role === 'admin')) return { error: 'Er bestaat al een beheerder.' };
+    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
+      return { error: 'Er bestaat al een account met dit e-mailadres.' };
+    }
+    const newUser: StoredUser = {
+      id: `u-${Date.now()}`, email, password, displayName, avatarUrl: null,
+      role: 'admin', createdAt: new Date().toISOString(),
+    };
+    const next = [...users, newUser];
+    writeUsers(next);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: newUser.id }));
+    setUser(stripPassword(newUser));
     return {};
   }, []);
 
@@ -197,7 +251,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateProfile, changePassword }}>
+    <AuthContext.Provider value={{ user, loading, login, adminLogin, bootstrapAdmin, signup, logout, updateProfile, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

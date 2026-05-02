@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { RequireAdmin } from "@/components/RequireAdmin";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
+import AdminLogin from "./pages/AdminLogin.tsx";
 import Profile from "./pages/Profile.tsx";
 import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -23,6 +24,7 @@ const App = () => (
         <MockAuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route
               path="/"
               element={
