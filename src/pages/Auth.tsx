@@ -231,6 +231,13 @@ const Auth = () => {
             </Tabs>
           </CardHeader>
         </Card>
+
+        <p className="mt-4 text-center text-xs" style={{ color: 'hsl(var(--sidebar-fg))' }}>
+          Beheerder?{' '}
+          <Link to="/admin/login" className="underline underline-offset-2 hover:text-primary">
+            Log hier in
+          </Link>
+        </p>
       </motion.div>
     </div>
   );
