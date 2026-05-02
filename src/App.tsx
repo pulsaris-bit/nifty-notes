@@ -24,6 +24,7 @@ const App = () => (
         <MockAuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route
               path="/"
               element={
