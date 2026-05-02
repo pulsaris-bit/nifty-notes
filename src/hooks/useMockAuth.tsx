@@ -251,7 +251,7 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateProfile, changePassword }}>
+    <AuthContext.Provider value={{ user, loading, login, adminLogin, bootstrapAdmin, signup, logout, updateProfile, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
