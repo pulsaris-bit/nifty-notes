@@ -37,8 +37,6 @@ interface AdminUser {
   trashedCount: number;
   notebookCount: number;
   labelCount: number;
-  attachmentCount: number;
-  attachmentBytes: number;
 }
 
 interface Stats {
@@ -46,8 +44,6 @@ interface Stats {
   newUsers7d: number;
   notes: number;
   trashedNotes: number;
-  attachments: number;
-  attachmentsBytes: number;
   notebooks: number;
   labels: number;
   shares: number;
@@ -202,9 +198,6 @@ const Admin = () => {
                     <span className="text-xs text-muted-foreground ml-2">+{stats.newUsers7d} (7d)</span>
                   )}
                 </StatTile>
-                <StatTile icon={<HardDrive className="w-4 h-4" />} label="Bijlagen op schijf">
-                  {stats ? formatBytes(stats.attachmentsBytes) : '—'}
-                </StatTile>
               </div>
 
               <Card>
@@ -218,7 +211,7 @@ const Admin = () => {
                     <Row label="In prullenbak" value={stats?.trashedNotes ?? 0} />
                     <Row label="Notitieboeken" value={stats?.notebooks ?? 0} />
                     <Row label="Labels" value={stats?.labels ?? 0} />
-                    <Row label="Bijlagen" value={stats?.attachments ?? 0} />
+                    
                     <Row label="Versies (historie)" value={stats?.versions ?? 0} />
                     <Row label="Gedeelde notities" value={stats?.shares ?? 0} />
                     <Row label="Server tijd" value={stats ? new Date(stats.serverTime).toLocaleString('nl-NL') : '—'} />
@@ -245,8 +238,6 @@ const Admin = () => {
                           <th className="text-left font-medium px-2 py-2">Rol</th>
                           <th className="text-right font-medium px-2 py-2">Notities</th>
                           <th className="text-right font-medium px-2 py-2">Boeken</th>
-                          <th className="text-right font-medium px-2 py-2">Bijlagen</th>
-                          <th className="text-right font-medium px-2 py-2">Opslag</th>
                           <th className="text-right font-medium px-4 py-2">Acties</th>
                         </tr>
                       </thead>
@@ -269,10 +260,6 @@ const Admin = () => {
                               )}
                             </td>
                             <td className="px-2 py-3 text-right tabular-nums">{u.notebookCount}</td>
-                            <td className="px-2 py-3 text-right tabular-nums">{u.attachmentCount}</td>
-                            <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">
-                              {formatBytes(u.attachmentBytes)}
-                            </td>
                             <td className="px-4 py-3 text-right whitespace-nowrap">
                               <Button size="icon" variant="ghost" onClick={() => setEditing(u)} title="Bewerken">
                                 <Pencil className="w-4 h-4" />
