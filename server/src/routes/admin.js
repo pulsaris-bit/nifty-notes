@@ -13,16 +13,14 @@ router.use(requireAuth, requireAdmin);
 // ---------- Database status ----------
 router.get('/stats', async (_req, res) => {
   try {
-    const [users, notes, attachments, notebooks, labels, shares, versions, dbSize, attBytes, recent] = await Promise.all([
+    const [users, notes, notebooks, labels, shares, versions, dbSize, recent] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS c FROM users'),
       pool.query('SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE deleted_at IS NOT NULL)::int AS trashed FROM notes'),
-      pool.query('SELECT COUNT(*)::int AS c FROM note_attachments'),
       pool.query('SELECT COUNT(*)::int AS c FROM notebooks'),
       pool.query('SELECT COUNT(*)::int AS c FROM labels'),
       pool.query('SELECT COUNT(*)::int AS c FROM note_shares'),
       pool.query('SELECT COUNT(*)::int AS c FROM note_versions'),
       pool.query('SELECT pg_database_size(current_database())::bigint AS b'),
-      pool.query('SELECT COALESCE(SUM(size_bytes),0)::bigint AS b FROM note_attachments'),
       pool.query("SELECT COUNT(*)::int AS c FROM users WHERE created_at > now() - interval '7 days'"),
     ]);
     res.json({
@@ -30,8 +28,6 @@ router.get('/stats', async (_req, res) => {
       newUsers7d: recent.rows[0].c,
       notes: notes.rows[0].total,
       trashedNotes: notes.rows[0].trashed,
-      attachments: attachments.rows[0].c,
-      attachmentsBytes: Number(attBytes.rows[0].b),
       notebooks: notebooks.rows[0].c,
       labels: labels.rows[0].c,
       shares: shares.rows[0].c,
@@ -66,9 +62,7 @@ router.get('/users', async (_req, res) => {
              (SELECT COUNT(*)::int FROM notes n WHERE n.user_id = u.id AND n.deleted_at IS NULL) AS note_count,
              (SELECT COUNT(*)::int FROM notes n WHERE n.user_id = u.id AND n.deleted_at IS NOT NULL) AS trashed_count,
              (SELECT COUNT(*)::int FROM notebooks nb WHERE nb.user_id = u.id) AS notebook_count,
-             (SELECT COUNT(*)::int FROM labels l WHERE l.user_id = u.id) AS label_count,
-             (SELECT COUNT(*)::int FROM note_attachments a JOIN notes n ON n.id = a.note_id WHERE n.user_id = u.id) AS attachment_count,
-             (SELECT COALESCE(SUM(a.size_bytes),0)::bigint FROM note_attachments a JOIN notes n ON n.id = a.note_id WHERE n.user_id = u.id) AS attachment_bytes
+             (SELECT COUNT(*)::int FROM labels l WHERE l.user_id = u.id) AS label_count
       FROM users u
       LEFT JOIN user_roles r ON r.user_id = u.id
       LEFT JOIN profiles p ON p.user_id = u.id
@@ -87,8 +81,6 @@ router.get('/users', async (_req, res) => {
         trashedCount: r.trashed_count,
         notebookCount: r.notebook_count,
         labelCount: r.label_count,
-        attachmentCount: r.attachment_count,
-        attachmentBytes: Number(r.attachment_bytes),
       })),
     });
   } catch (e) {
