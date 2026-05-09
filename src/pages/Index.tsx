@@ -284,7 +284,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -322,7 +322,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           </div>
         </div>
@@ -360,7 +360,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           )}
         </div>
