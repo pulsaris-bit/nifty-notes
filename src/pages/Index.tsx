@@ -54,7 +54,6 @@ const Index = () => {
     flushPendingPatch, refetchNote,
     searchUsers, listShares, shareNote, updateShare, removeShare, setSharedNoteNotebook,
     listVersions, restoreVersion, commitVersion,
-    listAttachments, addAttachment, removeAttachment,
   } = useNotes();
 
   // Notes resolved for bulk-label dialog (from current notes list).
@@ -285,7 +284,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -323,7 +322,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           </div>
         </div>
@@ -361,7 +360,7 @@ const Index = () => {
               onModeChange={setActivePresenceMode}
               onFlush={flushPendingPatch} onRefetch={refetchNote}
               listVersions={listVersions} restoreVersion={restoreVersion} commitVersion={commitVersion}
-              listAttachments={listAttachments} addAttachment={addAttachment} removeAttachment={removeAttachment}
+
             />
           )}
         </div>

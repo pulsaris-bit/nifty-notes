@@ -45,13 +45,6 @@ export interface PresenceViewer {
   isEditing: boolean;
 }
 
-export interface NoteAttachment {
-  id: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  createdAt: string;
-}
 
 export const TRASH_RETENTION_DAYS = 30;
 
