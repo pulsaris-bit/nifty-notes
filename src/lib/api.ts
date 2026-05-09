@@ -74,31 +74,3 @@ export function eventStreamUrl(): string | null {
   return `${API_URL}/events/stream?${params.toString()}`;
 }
 
-/** Direct download URL for a note attachment (token in query for <a> links). */
-export function attachmentDownloadUrl(noteId: string, attId: string): string | null {
-  const token = getToken();
-  if (!API_URL || !token) return null;
-  const params = new URLSearchParams({ token });
-  return `${API_URL}/uploads/note/${encodeURIComponent(noteId)}/${encodeURIComponent(attId)}?${params.toString()}`;
-}
-
-/** Upload a single attachment file for a note. Returns the metadata row. */
-export async function uploadAttachment(noteId: string, file: File): Promise<{
-  id: string; filename: string; mimeType: string; size: number; createdAt: string;
-}> {
-  if (!API_URL) throw new ApiError('No API configured', 0);
-  const token = getToken();
-  if (!token) throw new ApiError('Not authenticated', 401);
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(`${API_URL}/uploads/note/${encodeURIComponent(noteId)}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'X-Device-Id': getDeviceId() },
-    body: fd,
-  });
-  let data: any = null;
-  const text = await res.text();
-  if (text) { try { data = JSON.parse(text); } catch { data = { error: text }; } }
-  if (!res.ok) throw new ApiError(data?.error || `HTTP ${res.status}`, res.status);
-  return data;
-}
